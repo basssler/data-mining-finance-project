@@ -20,10 +20,11 @@ Train first baseline model using Layer 1 financial features only.
 modeling_table_v1.csv
 
 ### Universe
-[example: 40 S&P 500 stocks]
+30-40 Large cap S&P 500 companies from a single sector. 
+Why? focused sector subset allows for us better comparability of finance rations, keeps it manageable, and preserves the strong market coverage for later sentiment modeling. 
 
 ### Date Range
-[example: 2019-01-01 to 2024-12-31]
+2015-2024
 
 ### Feature Set
 Layer 1 only

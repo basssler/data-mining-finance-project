@@ -18,16 +18,11 @@ Binary classification:
 One row = one stock on one date.
 
 ## Initial Universe
-[Write your chosen stock universe here]
-Examples:
-- 30–50 S&P 500 stocks
-- one sector subset
-- top 50 large-cap names
+30-40 Large cap S&P 500 companies from a single sector. 
+Why? focused sector subset allows for us better comparability of finance rations, keeps it manageable, and preserves the strong market coverage for later sentiment modeling. 
 
 ## Time Horizon
-[Write chosen years here]
-Example:
-2018–2024
+2015-2024
 
 ## Feature Layers
 ### Layer 1
