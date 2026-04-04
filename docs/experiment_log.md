@@ -98,6 +98,153 @@ Build the next Layer 1 step: either the modeling panel assembly or the first bas
 
 ---
 
+## Layer 1 Benchmark Lock
+
+### Experiment ID
+EXP-001
+
+### Date
+2026-04-04
+
+### Objective
+Finalize the Layer 1 baseline benchmark using financial-statement-only features on the full Consumer Staples universe.
+
+### Dataset Version
+- `data/interim/fundamentals/fundamentals_quarterly_clean.parquet`
+- `data/interim/features/layer1_financial_features.parquet`
+- `data/interim/prices/prices_with_labels.parquet`
+- `data/processed/modeling/layer1_modeling_panel.parquet`
+
+### Universe
+34 Consumer Staples names stored in `src/universe.py`
+
+### Date Range
+2015-01-01 to 2024-12-31
+
+### Feature Set
+Initial engineered Layer 1 set:
+- current_ratio
+- quick_ratio
+- cash_ratio
+- working_capital_to_total_assets
+- debt_to_equity
+- debt_to_assets
+- long_term_debt_ratio
+- gross_margin
+- operating_margin
+- net_margin
+- roa
+- roe
+- asset_turnover
+- inventory_turnover
+- receivables_turnover
+- revenue_growth_qoq
+- revenue_growth_yoy
+- earnings_growth_qoq
+- earnings_growth_yoy
+- cfo_to_net_income
+- accruals_ratio
+
+Final modeling features after filtering:
+- current_ratio
+- quick_ratio
+- cash_ratio
+- working_capital_to_total_assets
+- debt_to_equity
+- debt_to_assets
+- long_term_debt_ratio
+- operating_margin
+- net_margin
+- roa
+- roe
+- asset_turnover
+- revenue_growth_qoq
+- earnings_growth_qoq
+- cfo_to_net_income
+- accruals_ratio
+
+### Target
+`label = 1 if 5-day forward return > 0, else 0`
+
+### Validation
+Single time-based holdout split:
+- Train dates before `2023-02-10`
+- Test dates on or after `2023-02-10`
+
+### Models
+- Logistic Regression
+- Random Forest
+- HistGradientBoosting
+
+### Preprocessing
+- Leakage-safe fundamentals alignment using `filing_date <= trading date`
+- Median imputation
+- Standard scaling for logistic regression
+- Drop features with more than 20% missing values in training data
+- Clip ratio outliers using train-set 1st and 99th percentiles
+
+### Hyperparameters
+- Logistic Regression:
+  - `solver = lbfgs`
+  - `max_iter = 1000`
+  - `class_weight = balanced`
+- Random Forest:
+  - `n_estimators = 300`
+  - `max_depth = 8`
+  - `min_samples_leaf = 20`
+  - `class_weight = balanced_subsample`
+- HistGradientBoosting:
+  - `max_depth = 6`
+  - `learning_rate = 0.05`
+  - `max_iter = 300`
+  - `min_samples_leaf = 50`
+
+### Results
+- Modeling panel rows: `68,524`
+- Tickers: `34`
+- Best model: `Random Forest`
+- Best AUC-ROC: `0.5138`
+
+Full comparison:
+- Logistic Regression:
+  - AUC-ROC: `0.4926`
+  - F1-score: `0.4040`
+  - Precision: `0.4964`
+  - Recall: `0.3405`
+  - Log loss: `0.6941`
+- Random Forest:
+  - AUC-ROC: `0.5138`
+  - F1-score: `0.3892`
+  - Precision: `0.5220`
+  - Recall: `0.3103`
+  - Log loss: `0.6933`
+- HistGradientBoosting:
+  - AUC-ROC: `0.5029`
+  - F1-score: `0.6236`
+  - Precision: `0.5029`
+  - Recall: `0.8205`
+  - Log loss: `0.6966`
+
+### Observations
+- Layer 1 data pipeline is now fully working end-to-end.
+- Financial-statement-only features produce only weak signal for 5-day direction prediction.
+- Random Forest performed best, but only slightly above random guessing.
+- The result is still useful because it creates a defensible baseline for comparing later feature layers.
+- Fully missing or very sparse features did not materially change the final conclusion when removed.
+
+### Problems
+- `gross_margin` remained unusable because gross profit was not part of the raw pull.
+- Some inventory- and receivables-based features were too sparse to keep in the final benchmark model.
+- Short-horizon stock direction may simply be weakly related to slow-moving quarterly fundamentals.
+
+### Decision
+Lock Layer 1 here as the official baseline benchmark and move to Layer 2 market features next.
+
+### Next Step
+Build Layer 2 market features and compare Layer 1 versus Layer 1 + Layer 2 on the same time-based evaluation setup.
+
+---
+
 ## Experiment Template
 
 ### Experiment ID
