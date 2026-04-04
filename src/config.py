@@ -12,4 +12,4 @@ PROJECT_LAYER = "layer_1_fundamentals"
 PRIMARY_DATA_SOURCE = "sec_edgar"
 
 # A small starter universe for testing can be added later.
-DEFAULT_TICKERS = []
+DEFAULT_TICKERS = ["AAPL", "MSFT", "AMZN", "GOOGL", "META"]

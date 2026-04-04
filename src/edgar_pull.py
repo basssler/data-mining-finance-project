@@ -26,10 +26,10 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 import gzip
 import zlib
-import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -46,16 +46,7 @@ if __package__ is None or __package__ == "":
 
 from src.config import END_DATE, START_DATE
 from src.paths import RAW_DATA_DIR
-
-# Reasonable starter assumption for a fixed universe.
-# You can change this list later without changing the rest of the script.
-FIXED_TICKERS = [
-    "AAPL",
-    "MSFT",
-    "AMZN",
-    "GOOGL",
-    "META",
-]
+from src.universe import get_layer1_tickers
 
 ALLOWED_FORM_TYPES = {"10-K", "10-Q", "10-K/A", "10-Q/A"}
 
@@ -354,6 +345,8 @@ def first_matching_column(columns: Iterable[str], candidates: Iterable[str]) -> 
     return None
 
 
+
+
 def fetch_company_facts_via_edgartools(
     ticker: str,
     cik: str,
@@ -498,16 +491,18 @@ def save_parquet(df: pd.DataFrame, output_path: Path) -> None:
 
 
 def main() -> None:
-    """Run the raw fundamentals pull for the fixed ticker universe."""
+    """Run the raw fundamentals pull for the Layer 1 ticker universe."""
     start_time = datetime.now()
     user_agent = get_sec_user_agent()
     requester = SecRequester(user_agent=user_agent, min_delay_seconds=0.25)
+    tickers = get_layer1_tickers()
 
     print("Loading SEC ticker to CIK mapping...")
     ticker_to_cik = load_ticker_to_cik_map(requester)
 
     all_rows: List[dict] = []
-    for ticker in FIXED_TICKERS:
+    print(f"Processing {len(tickers)} tickers from src.universe...")
+    for ticker in tickers:
         cik = ticker_to_cik.get(ticker)
         if not cik:
             print(f"{ticker}: missing CIK mapping, skipping")
