@@ -71,6 +71,12 @@ LAYER2_FEATURE_COLUMNS = [
     "rsi_14",
 ]
 
+LAYER2_CORE_FEATURE_COLUMNS = [
+    "return_5d",
+    "return_21d",
+    "volatility_21d",
+]
+
 
 def get_layer1_panel_path() -> Path:
     """Return the Layer 1 modeling panel path."""
@@ -341,7 +347,8 @@ def main() -> None:
 
     feature_set_candidates = {
         "layer1_only": LAYER1_FEATURE_COLUMNS,
-        "layer1_plus_layer2": LAYER1_FEATURE_COLUMNS + LAYER2_FEATURE_COLUMNS,
+        "layer1_plus_layer2_core": LAYER1_FEATURE_COLUMNS + LAYER2_CORE_FEATURE_COLUMNS,
+        "layer1_plus_layer2_full": LAYER1_FEATURE_COLUMNS + LAYER2_FEATURE_COLUMNS,
     }
 
     comparison_results = {}
