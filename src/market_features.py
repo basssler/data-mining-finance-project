@@ -40,6 +40,11 @@ MARKET_FEATURE_COLUMNS = [
     "volatility_21d",
     "volume_ratio_20d",
     "rsi_14",
+    "return_1d",
+    "return_10d",
+    "volatility_5d",
+    "volatility_ratio_5d_21d",
+    "volume_zscore_20d",
 ]
 
 
@@ -112,13 +117,29 @@ def engineer_market_features(df: pd.DataFrame) -> pd.DataFrame:
 
     daily_return = feature_df.groupby("ticker")["adj_close"].pct_change()
 
+    # return_1d = adj_close_t / adj_close_t-1 - 1
+    lagged_1d_price = feature_df.groupby("ticker")["adj_close"].shift(1)
+    feature_df["return_1d"] = safe_divide(feature_df["adj_close"], lagged_1d_price) - 1.0
+
     # return_5d = adj_close_t / adj_close_t-5 - 1
     lagged_5d_price = feature_df.groupby("ticker")["adj_close"].shift(5)
     feature_df["return_5d"] = safe_divide(feature_df["adj_close"], lagged_5d_price) - 1.0
 
+    # return_10d = adj_close_t / adj_close_t-10 - 1
+    lagged_10d_price = feature_df.groupby("ticker")["adj_close"].shift(10)
+    feature_df["return_10d"] = safe_divide(feature_df["adj_close"], lagged_10d_price) - 1.0
+
     # return_21d = adj_close_t / adj_close_t-21 - 1
     lagged_21d_price = feature_df.groupby("ticker")["adj_close"].shift(21)
     feature_df["return_21d"] = safe_divide(feature_df["adj_close"], lagged_21d_price) - 1.0
+
+    # volatility_5d = rolling std of daily returns over the prior 5 trading days
+    feature_df["volatility_5d"] = (
+        daily_return.groupby(feature_df["ticker"])
+        .rolling(window=5, min_periods=5)
+        .std()
+        .reset_index(level=0, drop=True)
+    )
 
     # volatility_21d = rolling std of daily returns over the prior 21 trading days
     feature_df["volatility_21d"] = (
@@ -126,6 +147,12 @@ def engineer_market_features(df: pd.DataFrame) -> pd.DataFrame:
         .rolling(window=21, min_periods=21)
         .std()
         .reset_index(level=0, drop=True)
+    )
+
+    # volatility_ratio_5d_21d = short volatility / medium volatility
+    feature_df["volatility_ratio_5d_21d"] = safe_divide(
+        feature_df["volatility_5d"],
+        feature_df["volatility_21d"],
     )
 
     # volume_ratio_20d = current volume / 20-day rolling average volume
@@ -136,6 +163,18 @@ def engineer_market_features(df: pd.DataFrame) -> pd.DataFrame:
         .reset_index(level=0, drop=True)
     )
     feature_df["volume_ratio_20d"] = safe_divide(feature_df["volume"], average_volume_20d)
+
+    # volume_zscore_20d = (volume - 20-day mean volume) / 20-day std volume
+    volume_std_20d = (
+        feature_df.groupby("ticker")["volume"]
+        .rolling(window=20, min_periods=20)
+        .std()
+        .reset_index(level=0, drop=True)
+    )
+    feature_df["volume_zscore_20d"] = safe_divide(
+        feature_df["volume"] - average_volume_20d,
+        volume_std_20d,
+    )
 
     # rsi_14 = 14-day relative strength index from adjusted close
     feature_df["rsi_14"] = (

@@ -1,15 +1,18 @@
-"""Compare Layer 1 versus Layer 1 + Layer 2 on the same time split.
+"""Compare Layer 1, full-filing Layer 3, and MD&A Layer 3 on the same split.
 
-This script keeps the locked Layer 1 baseline intact and adds a direct
-comparison against a combined feature set that includes market features.
+This script evaluates three setups on the same time-based holdout:
+- Layer 1 only
+- Layer 1 + full-filing SEC sentiment
+- Layer 1 + MD&A-only SEC sentiment
 
 Inputs:
     data/processed/modeling/layer1_modeling_panel.parquet
-    data/interim/features/layer2_market_features.parquet
+    data/processed/modeling/layer1_layer3_modeling_panel.parquet
+    data/processed/modeling/layer1_layer3_mda_modeling_panel.parquet
 
 Outputs:
-    outputs/comparison/layer_comparison_metrics.json
-    outputs/comparison/layer_comparison_predictions.parquet
+    outputs/comparison/layer3_mda_comparison_metrics.json
+    outputs/comparison/layer3_mda_comparison_predictions.parquet
 """
 
 from __future__ import annotations
@@ -31,7 +34,7 @@ if __package__ is None or __package__ == "":
         sys.path.insert(0, str(project_root))
 
 from src.evaluate import compute_classification_metrics
-from src.paths import INTERIM_DATA_DIR, OUTPUTS_DIR, PROCESSED_DATA_DIR
+from src.paths import OUTPUTS_DIR, PROCESSED_DATA_DIR
 
 TARGET_COLUMN = "label"
 TEST_SIZE = 0.20
@@ -63,52 +66,66 @@ LAYER1_FEATURE_COLUMNS = [
     "accruals_ratio",
 ]
 
-LAYER2_FEATURE_COLUMNS = [
-    "return_1d",
-    "return_5d",
-    "return_10d",
-    "return_21d",
-    "volatility_5d",
-    "volatility_21d",
-    "volatility_ratio_5d_21d",
-    "volume_ratio_20d",
-    "volume_zscore_20d",
-    "rsi_14",
+LAYER3_FULL_FEATURE_COLUMNS = [
+    "sec_sentiment_score",
+    "sec_positive_prob",
+    "sec_negative_prob",
+    "sec_neutral_prob",
+    "sec_sentiment_abs",
+    "sec_sentiment_change_prev",
+    "sec_positive_change_prev",
+    "sec_negative_change_prev",
+    "sec_chunk_count",
+    "sec_log_chunk_count",
+    "sec_is_10k",
+    "sec_is_10q",
 ]
 
-LAYER2_CORE_FEATURE_COLUMNS = [
-    "return_1d",
-    "return_5d",
-    "return_10d",
-    "return_21d",
-    "volatility_5d",
-    "volatility_21d",
-    "volatility_ratio_5d_21d",
+LAYER3_MDA_FEATURE_COLUMNS = [
+    "mda_sentiment_score",
+    "mda_positive_prob",
+    "mda_negative_prob",
+    "mda_neutral_prob",
+    "mda_sentiment_abs",
+    "mda_sentiment_change_prev",
+    "mda_positive_change_prev",
+    "mda_negative_change_prev",
+    "mda_chunk_count",
+    "mda_log_chunk_count",
+    "mda_text_length",
+    "mda_log_text_length",
+    "mda_is_10k",
+    "mda_is_10q",
 ]
 
 
 def get_layer1_panel_path() -> Path:
-    """Return the Layer 1 modeling panel path."""
+    """Return the locked Layer 1 daily modeling panel path."""
     return PROCESSED_DATA_DIR / "modeling" / "layer1_modeling_panel.parquet"
 
 
-def get_layer2_feature_path() -> Path:
-    """Return the Layer 2 market feature path."""
-    return INTERIM_DATA_DIR / "features" / "layer2_market_features.parquet"
+def get_layer1_layer3_panel_path() -> Path:
+    """Return the daily panel with full-filing Layer 3 sentiment."""
+    return PROCESSED_DATA_DIR / "modeling" / "layer1_layer3_modeling_panel.parquet"
+
+
+def get_layer1_layer3_mda_panel_path() -> Path:
+    """Return the daily panel with MD&A-only Layer 3 sentiment."""
+    return PROCESSED_DATA_DIR / "modeling" / "layer1_layer3_mda_modeling_panel.parquet"
 
 
 def get_metrics_output_path() -> Path:
-    """Return the comparison metrics JSON path and create its folder."""
+    """Return the Layer 3 MD&A comparison metrics JSON path."""
     output_dir = OUTPUTS_DIR / "comparison"
     output_dir.mkdir(parents=True, exist_ok=True)
-    return output_dir / "layer_comparison_metrics.json"
+    return output_dir / "layer3_mda_comparison_metrics.json"
 
 
 def get_predictions_output_path() -> Path:
-    """Return the comparison predictions parquet path and create its folder."""
+    """Return the Layer 3 MD&A comparison prediction parquet path."""
     output_dir = OUTPUTS_DIR / "comparison"
     output_dir.mkdir(parents=True, exist_ok=True)
-    return output_dir / "layer_comparison_predictions.parquet"
+    return output_dir / "layer3_mda_comparison_predictions.parquet"
 
 
 def load_parquet(path: Path, required_columns: list[str], dataset_name: str) -> pd.DataFrame:
@@ -126,24 +143,14 @@ def load_parquet(path: Path, required_columns: list[str], dataset_name: str) -> 
     return df.copy()
 
 
-def build_combined_panel(layer1_df: pd.DataFrame, layer2_df: pd.DataFrame) -> pd.DataFrame:
-    """Merge Layer 2 market features onto the Layer 1 modeling panel."""
-    combined = layer1_df.merge(
-        layer2_df[["ticker", "date"] + LAYER2_FEATURE_COLUMNS],
-        on=["ticker", "date"],
-        how="left",
-    )
-    return combined
-
-
-def prepare_modeling_data(df: pd.DataFrame) -> pd.DataFrame:
+def prepare_modeling_data(df: pd.DataFrame, feature_columns: list[str]) -> pd.DataFrame:
     """Normalize dtypes and keep rows with a valid target."""
     prepared = df.copy()
     prepared["ticker"] = prepared["ticker"].astype("string")
     prepared["date"] = pd.to_datetime(prepared["date"], errors="coerce")
     prepared[TARGET_COLUMN] = pd.to_numeric(prepared[TARGET_COLUMN], errors="coerce").astype("Int64")
 
-    for column in LAYER1_FEATURE_COLUMNS + LAYER2_FEATURE_COLUMNS:
+    for column in feature_columns:
         if column in prepared.columns:
             prepared[column] = pd.to_numeric(prepared[column], errors="coerce")
 
@@ -153,7 +160,7 @@ def prepare_modeling_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def split_by_time(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.Timestamp]:
-    """Create the same time-based train/test split used in Layer 1."""
+    """Create the same time-based train/test split used in prior layers."""
     unique_dates = sorted(df["date"].dropna().unique())
     split_index = int(len(unique_dates) * (1 - TEST_SIZE))
     split_index = max(1, min(split_index, len(unique_dates) - 1))
@@ -164,8 +171,11 @@ def split_by_time(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.Time
     return train_df, test_df, split_date
 
 
-def select_usable_features(train_df: pd.DataFrame, candidate_columns: list[str]) -> tuple[list[str], dict[str, float]]:
-    """Keep feature columns with acceptable missingness in training data."""
+def select_usable_features(
+    train_df: pd.DataFrame,
+    candidate_columns: list[str],
+) -> tuple[list[str], dict[str, float]]:
+    """Keep columns with observed values and acceptable missingness."""
     usable_features = []
     missingness_by_feature = {}
     for column in candidate_columns:
@@ -180,7 +190,11 @@ def select_usable_features(train_df: pd.DataFrame, candidate_columns: list[str])
     return usable_features, missingness_by_feature
 
 
-def clip_outliers(train_df: pd.DataFrame, test_df: pd.DataFrame, feature_columns: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
+def clip_outliers(
+    train_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    feature_columns: list[str],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Clip feature outliers using train-set quantiles only."""
     clipped_train = train_df.copy()
     clipped_test = test_df.copy()
@@ -190,6 +204,7 @@ def clip_outliers(train_df: pd.DataFrame, test_df: pd.DataFrame, feature_columns
         upper_bound = clipped_train[column].quantile(CLIP_UPPER_QUANTILE)
         if pd.isna(lower_bound) or pd.isna(upper_bound):
             continue
+
         clipped_train[column] = clipped_train[column].clip(lower=lower_bound, upper=upper_bound)
         clipped_test[column] = clipped_test[column].clip(lower=lower_bound, upper=upper_bound)
 
@@ -280,7 +295,7 @@ def save_metrics(payload: dict, output_path: Path) -> None:
 
 
 def save_predictions(test_df: pd.DataFrame, comparison_results: dict, output_path: Path) -> None:
-    """Save best predictions for each layer setup."""
+    """Save best predictions for each feature setup."""
     frames = []
     for setup_name, setup_payload in comparison_results.items():
         best_model_name = setup_payload["best_model"]
@@ -296,14 +311,14 @@ def save_predictions(test_df: pd.DataFrame, comparison_results: dict, output_pat
     pd.concat(frames, ignore_index=True).to_parquet(output_path, index=False)
 
 
-def print_comparison_summary(
+def print_summary(
     split_date: pd.Timestamp,
     train_df: pd.DataFrame,
     test_df: pd.DataFrame,
     comparison_results: dict,
 ) -> None:
-    """Print a concise Layer 1 versus Layer 1 + Layer 2 summary."""
-    print("\nLayer Comparison Summary")
+    """Print a concise Layer 1 versus full-filing versus MD&A summary."""
+    print("\nLayer 3 MD&A Comparison Summary")
     print("-" * 60)
     print(f"Train rows: {len(train_df):,}")
     print(f"Test rows:  {len(test_df):,}")
@@ -327,9 +342,10 @@ def print_comparison_summary(
 
 
 def main() -> None:
-    """Compare Layer 1 and Layer 1 + Layer 2 on the same holdout split."""
+    """Compare Layer 1, full-filing Layer 3, and MD&A Layer 3 on the same holdout."""
     layer1_path = get_layer1_panel_path()
-    layer2_path = get_layer2_feature_path()
+    layer1_layer3_path = get_layer1_layer3_panel_path()
+    layer1_layer3_mda_path = get_layer1_layer3_mda_panel_path()
     metrics_output_path = get_metrics_output_path()
     predictions_output_path = get_predictions_output_path()
 
@@ -340,31 +356,72 @@ def main() -> None:
         "Layer 1 panel",
     )
 
-    print(f"Loading Layer 2 features from: {layer2_path}")
-    layer2_df = load_parquet(
-        layer2_path,
-        ["ticker", "date"] + LAYER2_FEATURE_COLUMNS,
-        "Layer 2 feature",
+    print(f"Loading Layer 1 + full-filing Layer 3 panel from: {layer1_layer3_path}")
+    layer1_layer3_df = load_parquet(
+        layer1_layer3_path,
+        ["ticker", "date", "forward_return_5d", TARGET_COLUMN]
+        + LAYER1_FEATURE_COLUMNS
+        + LAYER3_FULL_FEATURE_COLUMNS,
+        "Layer 1 + full-filing Layer 3 panel",
     )
 
-    print("Merging Layer 2 market features onto the Layer 1 panel...")
-    combined_df = build_combined_panel(layer1_df, layer2_df)
-    prepared_df = prepare_modeling_data(combined_df)
-
-    print("Creating shared time-based train/test split...")
-    train_df, test_df, split_date = split_by_time(prepared_df)
+    print(f"Loading Layer 1 + MD&A Layer 3 panel from: {layer1_layer3_mda_path}")
+    layer1_layer3_mda_df = load_parquet(
+        layer1_layer3_mda_path,
+        ["ticker", "date", "forward_return_5d", TARGET_COLUMN]
+        + LAYER1_FEATURE_COLUMNS
+        + LAYER3_MDA_FEATURE_COLUMNS,
+        "Layer 1 + MD&A Layer 3 panel",
+    )
 
     feature_set_candidates = {
         "layer1_only": LAYER1_FEATURE_COLUMNS,
-        "layer1_plus_layer2_core": LAYER1_FEATURE_COLUMNS + LAYER2_CORE_FEATURE_COLUMNS,
-        "layer1_plus_layer2_full": LAYER1_FEATURE_COLUMNS + LAYER2_FEATURE_COLUMNS,
+        "layer1_plus_layer3_full": LAYER1_FEATURE_COLUMNS + LAYER3_FULL_FEATURE_COLUMNS,
+        "layer1_plus_layer3_mda": LAYER1_FEATURE_COLUMNS + LAYER3_MDA_FEATURE_COLUMNS,
+    }
+
+    prepared_layer1 = prepare_modeling_data(layer1_df, LAYER1_FEATURE_COLUMNS)
+    prepared_layer1_layer3 = prepare_modeling_data(
+        layer1_layer3_df,
+        LAYER1_FEATURE_COLUMNS + LAYER3_FULL_FEATURE_COLUMNS,
+    )
+    prepared_layer1_layer3_mda = prepare_modeling_data(
+        layer1_layer3_mda_df,
+        LAYER1_FEATURE_COLUMNS + LAYER3_MDA_FEATURE_COLUMNS,
+    )
+
+    print("Creating shared time-based train/test split...")
+    train_df, test_df, split_date = split_by_time(prepared_layer1)
+
+    train_df_layer3 = prepared_layer1_layer3[prepared_layer1_layer3["date"] < split_date].copy()
+    test_df_layer3 = prepared_layer1_layer3[prepared_layer1_layer3["date"] >= split_date].copy()
+
+    train_df_layer3_mda = prepared_layer1_layer3_mda[
+        prepared_layer1_layer3_mda["date"] < split_date
+    ].copy()
+    test_df_layer3_mda = prepared_layer1_layer3_mda[
+        prepared_layer1_layer3_mda["date"] >= split_date
+    ].copy()
+
+    setup_frames = {
+        "layer1_only": (train_df, test_df),
+        "layer1_plus_layer3_full": (train_df_layer3, test_df_layer3),
+        "layer1_plus_layer3_mda": (train_df_layer3_mda, test_df_layer3_mda),
     }
 
     comparison_results = {}
     for setup_name, candidate_columns in feature_set_candidates.items():
         print(f"Training model set for {setup_name}...")
-        usable_feature_columns, missingness_by_feature = select_usable_features(train_df, candidate_columns)
-        clipped_train_df, clipped_test_df = clip_outliers(train_df, test_df, usable_feature_columns)
+        current_train_df, current_test_df = setup_frames[setup_name]
+        usable_feature_columns, missingness_by_feature = select_usable_features(
+            current_train_df,
+            candidate_columns,
+        )
+        clipped_train_df, clipped_test_df = clip_outliers(
+            current_train_df,
+            current_test_df,
+            usable_feature_columns,
+        )
         results = run_model_set(clipped_train_df, clipped_test_df, usable_feature_columns)
         best_model_name, _ = choose_best_result(results)
 
@@ -387,7 +444,8 @@ def main() -> None:
                 "train_missingness_by_feature_pct": payload["train_missingness_by_feature_pct"],
                 "best_model": payload["best_model"],
                 "results": {
-                    model_name: result["metrics"] for model_name, result in payload["results"].items()
+                    model_name: result["metrics"]
+                    for model_name, result in payload["results"].items()
                 },
             }
             for setup_name, payload in comparison_results.items()
@@ -398,8 +456,8 @@ def main() -> None:
     print(f"Saving comparison predictions to: {predictions_output_path}")
     save_predictions(test_df, comparison_results, predictions_output_path)
 
-    print_comparison_summary(split_date, train_df, test_df, comparison_results)
-    print("\nSaved Layer comparison outputs.")
+    print_summary(split_date, train_df, test_df, comparison_results)
+    print("\nSaved Layer 3 MD&A comparison outputs.")
 
 
 if __name__ == "__main__":
