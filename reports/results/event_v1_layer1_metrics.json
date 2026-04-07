@@ -1,0 +1,1419 @@
+{
+  "panel_name": "event_v1_layer1",
+  "panel_path": "C:\\Users\\maxba\\Documents\\GitHub\\data-mining-finance-project\\data\\processed\\modeling\\event_v1_layer1_panel.parquet",
+  "target_column": "target_event_v1",
+  "selection_rule": "highest mean CV AUC-ROC, tie-break lowest mean CV log loss, final tie-break model name",
+  "candidate_feature_columns": [
+    "current_ratio",
+    "quick_ratio",
+    "cash_ratio",
+    "working_capital_to_total_assets",
+    "debt_to_equity",
+    "debt_to_assets",
+    "long_term_debt_ratio",
+    "gross_margin",
+    "operating_margin",
+    "net_margin",
+    "roa",
+    "roe",
+    "asset_turnover",
+    "inventory_turnover",
+    "receivables_turnover",
+    "revenue_growth_qoq",
+    "revenue_growth_yoy",
+    "earnings_growth_qoq",
+    "earnings_growth_yoy",
+    "cfo_to_net_income",
+    "accruals_ratio"
+  ],
+  "validation_policy": {
+    "date_column": "date",
+    "horizon_days": 5,
+    "embargo_days": 5,
+    "min_train_dates": 756,
+    "n_splits": 5,
+    "holdout_start": "2024-01-02",
+    "folds": [
+      {
+        "fold_number": 1,
+        "date_metadata": {
+          "train_start_date": "2015-07-31",
+          "train_end_date": "2018-07-18",
+          "purge_start_date": "2018-07-19",
+          "purge_end_date": "2018-07-31",
+          "validation_start_date": "2018-08-01",
+          "validation_end_date": "2019-08-30"
+        },
+        "train_date_count": 747,
+        "validation_date_count": 273,
+        "purged_date_count": 9
+      },
+      {
+        "fold_number": 2,
+        "date_metadata": {
+          "train_start_date": "2015-07-31",
+          "train_end_date": "2019-08-19",
+          "purge_start_date": "2019-08-20",
+          "purge_end_date": "2019-08-30",
+          "validation_start_date": "2019-09-03",
+          "validation_end_date": "2020-09-30"
+        },
+        "train_date_count": 1020,
+        "validation_date_count": 273,
+        "purged_date_count": 9
+      },
+      {
+        "fold_number": 3,
+        "date_metadata": {
+          "train_start_date": "2015-07-31",
+          "train_end_date": "2020-09-17",
+          "purge_start_date": "2020-09-18",
+          "purge_end_date": "2020-09-30",
+          "validation_start_date": "2020-10-01",
+          "validation_end_date": "2021-10-29"
+        },
+        "train_date_count": 1293,
+        "validation_date_count": 273,
+        "purged_date_count": 9
+      },
+      {
+        "fold_number": 4,
+        "date_metadata": {
+          "train_start_date": "2015-07-31",
+          "train_end_date": "2021-10-18",
+          "purge_start_date": "2021-10-19",
+          "purge_end_date": "2021-10-29",
+          "validation_start_date": "2021-11-01",
+          "validation_end_date": "2022-11-29"
+        },
+        "train_date_count": 1566,
+        "validation_date_count": 272,
+        "purged_date_count": 9
+      },
+      {
+        "fold_number": 5,
+        "date_metadata": {
+          "train_start_date": "2015-07-31",
+          "train_end_date": "2022-11-15",
+          "purge_start_date": "2022-11-16",
+          "purge_end_date": "2022-11-29",
+          "validation_start_date": "2022-11-30",
+          "validation_end_date": "2023-12-29"
+        },
+        "train_date_count": 1838,
+        "validation_date_count": 272,
+        "purged_date_count": 9
+      }
+    ],
+    "holdout": {
+      "date_metadata": {
+        "train_start_date": "2015-07-31",
+        "train_end_date": "2023-12-15",
+        "purge_start_date": "2023-12-18",
+        "purge_end_date": "2023-12-29",
+        "validation_start_date": "2024-01-02",
+        "validation_end_date": "2024-12-31"
+      },
+      "train_date_count": 2110,
+      "holdout_date_count": 252,
+      "purged_date_count": 9
+    }
+  },
+  "preprocessing": {
+    "max_missingness_pct": 20.0,
+    "clip_lower_quantile": 0.01,
+    "clip_upper_quantile": 0.99,
+    "threshold": 0.5
+  },
+  "model_results": {
+    "logistic_regression": {
+      "fold_results": [
+        {
+          "fold_number": 1,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2018-07-18",
+            "purge_start_date": "2018-07-19",
+            "purge_end_date": "2018-07-31",
+            "validation_start_date": "2018-08-01",
+            "validation_end_date": "2019-08-30"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 9009,
+            "accuracy": 0.5023865023865024,
+            "auc_roc": 0.4981368327330841,
+            "f1": 0.5360654041188037,
+            "precision": 0.5177928828468612,
+            "recall": 0.5556747479081742,
+            "log_loss": 0.6930876879698751,
+            "positive_prediction_rate": 0.5552225552225553,
+            "true_class_0_rate": 0.4826284826284827,
+            "true_class_1_rate": 0.5173715173715173,
+            "predicted_class_0_rate": 0.44477744477744474,
+            "predicted_class_1_rate": 0.5552225552225553,
+            "confusion_matrix": [
+              [
+                1936,
+                2412
+              ],
+              [
+                2071,
+                2590
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "cfo_to_net_income"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 12.952769283044512,
+            "quick_ratio": 21.495073054706083,
+            "cash_ratio": 16.371049949031597,
+            "working_capital_to_total_assets": 17.730207271491675,
+            "debt_to_equity": 13.625552157662248,
+            "debt_to_assets": 13.326537546721031,
+            "long_term_debt_ratio": 18.38939857288481,
+            "gross_margin": 100.0,
+            "operating_margin": 18.66123003737683,
+            "net_margin": 12.952769283044512,
+            "roa": 31.28100577641862,
+            "roe": 28.895684675501187,
+            "asset_turnover": 31.28100577641862,
+            "inventory_turnover": 38.1107713217805,
+            "receivables_turnover": 41.40672782874618,
+            "revenue_growth_qoq": 30.329595650696568,
+            "revenue_growth_yoy": 64.21338769962624,
+            "earnings_growth_qoq": 30.76452599388379,
+            "earnings_growth_yoy": 65.4026503567788,
+            "cfo_to_net_income": 13.700305810397554,
+            "accruals_ratio": 31.28100577641862
+          }
+        },
+        {
+          "fold_number": 2,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2019-08-19",
+            "purge_start_date": "2019-08-20",
+            "purge_end_date": "2019-08-30",
+            "validation_start_date": "2019-09-03",
+            "validation_end_date": "2020-09-30"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 9009,
+            "accuracy": 0.5023865023865024,
+            "auc_roc": 0.5033479352949202,
+            "f1": 0.4939609436731008,
+            "precision": 0.4997715851987209,
+            "recall": 0.4882838652086588,
+            "log_loss": 0.6930572998502822,
+            "positive_prediction_rate": 0.48595848595848595,
+            "true_class_0_rate": 0.5026085026085025,
+            "true_class_1_rate": 0.4973914973914974,
+            "predicted_class_0_rate": 0.514041514041514,
+            "predicted_class_1_rate": 0.48595848595848595,
+            "confusion_matrix": [
+              [
+                2338,
+                2190
+              ],
+              [
+                2293,
+                2188
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "cfo_to_net_income"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 10.200640701399427,
+            "quick_ratio": 20.102006407013995,
+            "cash_ratio": 13.324060023604789,
+            "working_capital_to_total_assets": 14.108076209745404,
+            "debt_to_equity": 11.254425897824987,
+            "debt_to_assets": 9.707469229472263,
+            "long_term_debt_ratio": 15.612881470241105,
+            "gross_margin": 100.0,
+            "operating_margin": 15.161861406170965,
+            "net_margin": 10.145843871185297,
+            "roa": 23.090541224076887,
+            "roe": 21.57730568200978,
+            "asset_turnover": 23.090541224076887,
+            "inventory_turnover": 32.5198111616928,
+            "receivables_turnover": 35.7148878772551,
+            "revenue_growth_qoq": 23.090541224076887,
+            "revenue_growth_yoy": 46.04619794301129,
+            "earnings_growth_qoq": 23.36031023436183,
+            "earnings_growth_yoy": 47.97251728207722,
+            "cfo_to_net_income": 11.199629067610859,
+            "accruals_ratio": 23.090541224076887
+          }
+        },
+        {
+          "fold_number": 3,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2020-09-17",
+            "purge_start_date": "2020-09-18",
+            "purge_end_date": "2020-09-30",
+            "validation_start_date": "2020-10-01",
+            "validation_end_date": "2021-10-29"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 9009,
+            "accuracy": 0.5279165279165279,
+            "auc_roc": 0.5182453824985079,
+            "f1": 0.4285906220609969,
+            "precision": 0.5136876006441223,
+            "recall": 0.36768095896726605,
+            "log_loss": 0.6930494597068247,
+            "positive_prediction_rate": 0.34465534465534464,
+            "true_class_0_rate": 0.5184815184815185,
+            "true_class_1_rate": 0.48151848151848153,
+            "predicted_class_0_rate": 0.6553446553446554,
+            "predicted_class_1_rate": 0.34465534465534464,
+            "confusion_matrix": [
+              [
+                3161,
+                1510
+              ],
+              [
+                2743,
+                1595
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "roe",
+            "earnings_growth_qoq",
+            "cfo_to_net_income"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 9.928818012403386,
+            "quick_ratio": 20.441145021843397,
+            "cash_ratio": 12.9991140439312,
+            "working_capital_to_total_assets": 13.604008187456085,
+            "debt_to_equity": 10.692573244126722,
+            "debt_to_assets": 9.773011945131824,
+            "long_term_debt_ratio": 15.90749396633367,
+            "gross_margin": 100.0,
+            "operating_margin": 15.192619069440624,
+            "net_margin": 10.267925335288547,
+            "roa": 20.42586991720893,
+            "roe": 19.368832676503832,
+            "asset_turnover": 20.42586991720893,
+            "inventory_turnover": 30.275257385513093,
+            "receivables_turnover": 33.42498396114013,
+            "revenue_growth_qoq": 20.105092719885132,
+            "revenue_growth_yoy": 37.91891974460025,
+            "earnings_growth_qoq": 19.67433476919317,
+            "earnings_growth_yoy": 39.04927748755079,
+            "cfo_to_net_income": 11.031680567011884,
+            "accruals_ratio": 20.42586991720893
+          }
+        },
+        {
+          "fold_number": 4,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2021-10-18",
+            "purge_start_date": "2021-10-19",
+            "purge_end_date": "2021-10-29",
+            "validation_start_date": "2021-11-01",
+            "validation_end_date": "2022-11-29"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 8976,
+            "accuracy": 0.49910873440285203,
+            "auc_roc": 0.4962252708584932,
+            "f1": 0.43059777102330293,
+            "precision": 0.5007363770250368,
+            "recall": 0.3776938458120418,
+            "log_loss": 0.6953630821251446,
+            "positive_prediction_rate": 0.3782308377896613,
+            "true_class_0_rate": 0.49855169340463457,
+            "true_class_1_rate": 0.5014483065953654,
+            "predicted_class_0_rate": 0.6217691622103387,
+            "predicted_class_1_rate": 0.3782308377896613,
+            "confusion_matrix": [
+              [
+                2780,
+                1695
+              ],
+              [
+                2801,
+                1700
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "quick_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "roa",
+            "roe",
+            "asset_turnover",
+            "revenue_growth_qoq",
+            "earnings_growth_qoq",
+            "cfo_to_net_income",
+            "accruals_ratio"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 8.538163001293661,
+            "quick_ratio": 19.397728906137704,
+            "cash_ratio": 10.945809975564181,
+            "working_capital_to_total_assets": 11.659719227636433,
+            "debt_to_equity": 9.323942312299364,
+            "debt_to_assets": 8.633989746538258,
+            "long_term_debt_ratio": 14.12007091179148,
+            "gross_margin": 100.0,
+            "operating_margin": 14.062574864644722,
+            "net_margin": 8.892721958698672,
+            "roa": 17.59379042690815,
+            "roe": 17.294331848018782,
+            "asset_turnover": 17.59379042690815,
+            "inventory_turnover": 27.959848593742514,
+            "receivables_turnover": 31.083800488716403,
+            "revenue_growth_qoq": 17.4572373149346,
+            "revenue_growth_yoy": 31.313784677303435,
+            "earnings_growth_qoq": 17.500359350294666,
+            "earnings_growth_yoy": 32.24330410617603,
+            "cfo_to_net_income": 9.915672464184754,
+            "accruals_ratio": 17.59379042690815
+          }
+        },
+        {
+          "fold_number": 5,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2022-11-15",
+            "purge_start_date": "2022-11-16",
+            "purge_end_date": "2022-11-29",
+            "validation_start_date": "2022-11-30",
+            "validation_end_date": "2023-12-29"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 8976,
+            "accuracy": 0.4949866310160428,
+            "auc_roc": 0.4821258214835496,
+            "f1": 0.48889390010147704,
+            "precision": 0.5076094591430579,
+            "recall": 0.471509351892127,
+            "log_loss": 0.6961709949897561,
+            "positive_prediction_rate": 0.47582442067736186,
+            "true_class_0_rate": 0.48774509803921573,
+            "true_class_1_rate": 0.5122549019607843,
+            "predicted_class_0_rate": 0.5241755793226381,
+            "predicted_class_1_rate": 0.47582442067736186,
+            "confusion_matrix": [
+              [
+                2275,
+                2103
+              ],
+              [
+                2430,
+                2168
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "quick_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "roa",
+            "roe",
+            "asset_turnover",
+            "revenue_growth_qoq",
+            "earnings_growth_qoq",
+            "cfo_to_net_income",
+            "accruals_ratio"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 7.721124650025632,
+            "quick_ratio": 18.596947829173075,
+            "cash_ratio": 9.70266966363027,
+            "working_capital_to_total_assets": 10.449938877715999,
+            "debt_to_equity": 8.399384833786822,
+            "debt_to_assets": 7.421428289759061,
+            "long_term_debt_ratio": 13.011159746046769,
+            "gross_margin": 100.0,
+            "operating_margin": 13.233960329665997,
+            "net_margin": 8.062226428486928,
+            "roa": 15.276627627272369,
+            "roe": 14.972987893844394,
+            "asset_turnover": 15.276627627272369,
+            "inventory_turnover": 25.896131550928665,
+            "receivables_turnover": 29.00350960211365,
+            "revenue_growth_qoq": 15.306202925982888,
+            "revenue_growth_yoy": 27.516857920264993,
+            "earnings_growth_qoq": 15.901652273354628,
+            "earnings_growth_yoy": 28.857604795141768,
+            "cfo_to_net_income": 9.696754603888166,
+            "accruals_ratio": 15.276627627272369
+          }
+        }
+      ],
+      "cv_summary": {
+        "fold_count": 5,
+        "accuracy_mean": 0.5053569796216856,
+        "accuracy_std": 0.011603149467226894,
+        "auc_roc_mean": 0.499616248573711,
+        "auc_roc_std": 0.011666812396401358,
+        "f1_mean": 0.4756217281955363,
+        "f1_std": 0.04099999266886707,
+        "precision_mean": 0.5079195809715598,
+        "precision_std": 0.007054595246560302,
+        "recall_mean": 0.4521685539576536,
+        "recall_std": 0.07081885373014125,
+        "log_loss_mean": 0.6941457049283765,
+        "log_loss_std": 0.0013483016098935104,
+        "positive_prediction_rate_mean": 0.4479783288606818,
+        "positive_prediction_rate_std": 0.07649780758478252,
+        "true_class_0_rate_mean": 0.49800305903247083,
+        "true_class_0_rate_std": 0.01250985031847969,
+        "true_class_1_rate_mean": 0.5019969409675291,
+        "true_class_1_rate_std": 0.012509850318479695,
+        "predicted_class_0_rate_mean": 0.5520216711393182,
+        "predicted_class_0_rate_std": 0.07649780758478253,
+        "predicted_class_1_rate_mean": 0.4479783288606818,
+        "predicted_class_1_rate_std": 0.07649780758478252
+      }
+    },
+    "random_forest": {
+      "fold_results": [
+        {
+          "fold_number": 1,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2018-07-18",
+            "purge_start_date": "2018-07-19",
+            "purge_end_date": "2018-07-31",
+            "validation_start_date": "2018-08-01",
+            "validation_end_date": "2019-08-30"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 9009,
+            "accuracy": 0.5292485292485293,
+            "auc_roc": 0.5147909595308957,
+            "f1": 0.5683460559796437,
+            "precision": 0.5406661502711076,
+            "recall": 0.5990130873203175,
+            "log_loss": 0.6951430017366107,
+            "positive_prediction_rate": 0.5732045732045732,
+            "true_class_0_rate": 0.4826284826284827,
+            "true_class_1_rate": 0.5173715173715173,
+            "predicted_class_0_rate": 0.4267954267954268,
+            "predicted_class_1_rate": 0.5732045732045732,
+            "confusion_matrix": [
+              [
+                1976,
+                2372
+              ],
+              [
+                1869,
+                2792
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "cfo_to_net_income"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 12.952769283044512,
+            "quick_ratio": 21.495073054706083,
+            "cash_ratio": 16.371049949031597,
+            "working_capital_to_total_assets": 17.730207271491675,
+            "debt_to_equity": 13.625552157662248,
+            "debt_to_assets": 13.326537546721031,
+            "long_term_debt_ratio": 18.38939857288481,
+            "gross_margin": 100.0,
+            "operating_margin": 18.66123003737683,
+            "net_margin": 12.952769283044512,
+            "roa": 31.28100577641862,
+            "roe": 28.895684675501187,
+            "asset_turnover": 31.28100577641862,
+            "inventory_turnover": 38.1107713217805,
+            "receivables_turnover": 41.40672782874618,
+            "revenue_growth_qoq": 30.329595650696568,
+            "revenue_growth_yoy": 64.21338769962624,
+            "earnings_growth_qoq": 30.76452599388379,
+            "earnings_growth_yoy": 65.4026503567788,
+            "cfo_to_net_income": 13.700305810397554,
+            "accruals_ratio": 31.28100577641862
+          }
+        },
+        {
+          "fold_number": 2,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2019-08-19",
+            "purge_start_date": "2019-08-20",
+            "purge_end_date": "2019-08-30",
+            "validation_start_date": "2019-09-03",
+            "validation_end_date": "2020-09-30"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 9009,
+            "accuracy": 0.5142635142635142,
+            "auc_roc": 0.5007328005642986,
+            "f1": 0.3967466225530742,
+            "precision": 0.5189325640100974,
+            "recall": 0.3211336755188574,
+            "log_loss": 0.6970885716184423,
+            "positive_prediction_rate": 0.3078033078033078,
+            "true_class_0_rate": 0.5026085026085025,
+            "true_class_1_rate": 0.4973914973914974,
+            "predicted_class_0_rate": 0.6921966921966922,
+            "predicted_class_1_rate": 0.3078033078033078,
+            "confusion_matrix": [
+              [
+                3194,
+                1334
+              ],
+              [
+                3042,
+                1439
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "cfo_to_net_income"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 10.200640701399427,
+            "quick_ratio": 20.102006407013995,
+            "cash_ratio": 13.324060023604789,
+            "working_capital_to_total_assets": 14.108076209745404,
+            "debt_to_equity": 11.254425897824987,
+            "debt_to_assets": 9.707469229472263,
+            "long_term_debt_ratio": 15.612881470241105,
+            "gross_margin": 100.0,
+            "operating_margin": 15.161861406170965,
+            "net_margin": 10.145843871185297,
+            "roa": 23.090541224076887,
+            "roe": 21.57730568200978,
+            "asset_turnover": 23.090541224076887,
+            "inventory_turnover": 32.5198111616928,
+            "receivables_turnover": 35.7148878772551,
+            "revenue_growth_qoq": 23.090541224076887,
+            "revenue_growth_yoy": 46.04619794301129,
+            "earnings_growth_qoq": 23.36031023436183,
+            "earnings_growth_yoy": 47.97251728207722,
+            "cfo_to_net_income": 11.199629067610859,
+            "accruals_ratio": 23.090541224076887
+          }
+        },
+        {
+          "fold_number": 3,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2020-09-17",
+            "purge_start_date": "2020-09-18",
+            "purge_end_date": "2020-09-30",
+            "validation_start_date": "2020-10-01",
+            "validation_end_date": "2021-10-29"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 9009,
+            "accuracy": 0.5101565101565102,
+            "auc_roc": 0.49867079067757575,
+            "f1": 0.4502304721564719,
+            "precision": 0.4898346435348333,
+            "recall": 0.4165514061779622,
+            "log_loss": 0.6965721721670126,
+            "positive_prediction_rate": 0.4094794094794095,
+            "true_class_0_rate": 0.5184815184815185,
+            "true_class_1_rate": 0.48151848151848153,
+            "predicted_class_0_rate": 0.5905205905205906,
+            "predicted_class_1_rate": 0.4094794094794095,
+            "confusion_matrix": [
+              [
+                2789,
+                1882
+              ],
+              [
+                2531,
+                1807
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "roe",
+            "earnings_growth_qoq",
+            "cfo_to_net_income"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 9.928818012403386,
+            "quick_ratio": 20.441145021843397,
+            "cash_ratio": 12.9991140439312,
+            "working_capital_to_total_assets": 13.604008187456085,
+            "debt_to_equity": 10.692573244126722,
+            "debt_to_assets": 9.773011945131824,
+            "long_term_debt_ratio": 15.90749396633367,
+            "gross_margin": 100.0,
+            "operating_margin": 15.192619069440624,
+            "net_margin": 10.267925335288547,
+            "roa": 20.42586991720893,
+            "roe": 19.368832676503832,
+            "asset_turnover": 20.42586991720893,
+            "inventory_turnover": 30.275257385513093,
+            "receivables_turnover": 33.42498396114013,
+            "revenue_growth_qoq": 20.105092719885132,
+            "revenue_growth_yoy": 37.91891974460025,
+            "earnings_growth_qoq": 19.67433476919317,
+            "earnings_growth_yoy": 39.04927748755079,
+            "cfo_to_net_income": 11.031680567011884,
+            "accruals_ratio": 20.42586991720893
+          }
+        },
+        {
+          "fold_number": 4,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2021-10-18",
+            "purge_start_date": "2021-10-19",
+            "purge_end_date": "2021-10-29",
+            "validation_start_date": "2021-11-01",
+            "validation_end_date": "2022-11-29"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 8976,
+            "accuracy": 0.5053475935828877,
+            "auc_roc": 0.5051530448230623,
+            "f1": 0.5071047957371225,
+            "precision": 0.5067672509429776,
+            "recall": 0.507442790491002,
+            "log_loss": 0.695132667802313,
+            "positive_prediction_rate": 0.5021167557932263,
+            "true_class_0_rate": 0.49855169340463457,
+            "true_class_1_rate": 0.5014483065953654,
+            "predicted_class_0_rate": 0.49788324420677366,
+            "predicted_class_1_rate": 0.5021167557932263,
+            "confusion_matrix": [
+              [
+                2252,
+                2223
+              ],
+              [
+                2217,
+                2284
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "quick_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "roa",
+            "roe",
+            "asset_turnover",
+            "revenue_growth_qoq",
+            "earnings_growth_qoq",
+            "cfo_to_net_income",
+            "accruals_ratio"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 8.538163001293661,
+            "quick_ratio": 19.397728906137704,
+            "cash_ratio": 10.945809975564181,
+            "working_capital_to_total_assets": 11.659719227636433,
+            "debt_to_equity": 9.323942312299364,
+            "debt_to_assets": 8.633989746538258,
+            "long_term_debt_ratio": 14.12007091179148,
+            "gross_margin": 100.0,
+            "operating_margin": 14.062574864644722,
+            "net_margin": 8.892721958698672,
+            "roa": 17.59379042690815,
+            "roe": 17.294331848018782,
+            "asset_turnover": 17.59379042690815,
+            "inventory_turnover": 27.959848593742514,
+            "receivables_turnover": 31.083800488716403,
+            "revenue_growth_qoq": 17.4572373149346,
+            "revenue_growth_yoy": 31.313784677303435,
+            "earnings_growth_qoq": 17.500359350294666,
+            "earnings_growth_yoy": 32.24330410617603,
+            "cfo_to_net_income": 9.915672464184754,
+            "accruals_ratio": 17.59379042690815
+          }
+        },
+        {
+          "fold_number": 5,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2022-11-15",
+            "purge_start_date": "2022-11-16",
+            "purge_end_date": "2022-11-29",
+            "validation_start_date": "2022-11-30",
+            "validation_end_date": "2023-12-29"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 8976,
+            "accuracy": 0.49342691622103385,
+            "auc_roc": 0.49434755333868113,
+            "f1": 0.47789642898151335,
+            "precision": 0.5062028703478473,
+            "recall": 0.4525880817746846,
+            "log_loss": 0.6957681906367522,
+            "positive_prediction_rate": 0.45799910873440286,
+            "true_class_0_rate": 0.48774509803921573,
+            "true_class_1_rate": 0.5122549019607843,
+            "predicted_class_0_rate": 0.5420008912655971,
+            "predicted_class_1_rate": 0.45799910873440286,
+            "confusion_matrix": [
+              [
+                2348,
+                2030
+              ],
+              [
+                2517,
+                2081
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "quick_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "roa",
+            "roe",
+            "asset_turnover",
+            "revenue_growth_qoq",
+            "earnings_growth_qoq",
+            "cfo_to_net_income",
+            "accruals_ratio"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 7.721124650025632,
+            "quick_ratio": 18.596947829173075,
+            "cash_ratio": 9.70266966363027,
+            "working_capital_to_total_assets": 10.449938877715999,
+            "debt_to_equity": 8.399384833786822,
+            "debt_to_assets": 7.421428289759061,
+            "long_term_debt_ratio": 13.011159746046769,
+            "gross_margin": 100.0,
+            "operating_margin": 13.233960329665997,
+            "net_margin": 8.062226428486928,
+            "roa": 15.276627627272369,
+            "roe": 14.972987893844394,
+            "asset_turnover": 15.276627627272369,
+            "inventory_turnover": 25.896131550928665,
+            "receivables_turnover": 29.00350960211365,
+            "revenue_growth_qoq": 15.306202925982888,
+            "revenue_growth_yoy": 27.516857920264993,
+            "earnings_growth_qoq": 15.901652273354628,
+            "earnings_growth_yoy": 28.857604795141768,
+            "cfo_to_net_income": 9.696754603888166,
+            "accruals_ratio": 15.276627627272369
+          }
+        }
+      ],
+      "cv_summary": {
+        "fold_count": 5,
+        "accuracy_mean": 0.5104886126944951,
+        "accuracy_std": 0.011694667221638047,
+        "auc_roc_mean": 0.5027390297869027,
+        "auc_roc_std": 0.006958000880630779,
+        "f1_mean": 0.48006487508156515,
+        "f1_std": 0.05720393198129853,
+        "precision_mean": 0.5124806958213727,
+        "precision_std": 0.016857904228473605,
+        "recall_mean": 0.4593458082565648,
+        "recall_std": 0.0925201490417159,
+        "log_loss_mean": 0.6959409207922262,
+        "log_loss_std": 0.0007791487840858477,
+        "positive_prediction_rate_mean": 0.4501206310029839,
+        "positive_prediction_rate_std": 0.08924265079220857,
+        "true_class_0_rate_mean": 0.49800305903247083,
+        "true_class_0_rate_std": 0.01250985031847969,
+        "true_class_1_rate_mean": 0.5019969409675291,
+        "true_class_1_rate_std": 0.012509850318479695,
+        "predicted_class_0_rate_mean": 0.5498793689970161,
+        "predicted_class_0_rate_std": 0.08924265079220857,
+        "predicted_class_1_rate_mean": 0.4501206310029839,
+        "predicted_class_1_rate_std": 0.08924265079220857
+      }
+    },
+    "hist_gradient_boosting": {
+      "fold_results": [
+        {
+          "fold_number": 1,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2018-07-18",
+            "purge_start_date": "2018-07-19",
+            "purge_end_date": "2018-07-31",
+            "validation_start_date": "2018-08-01",
+            "validation_end_date": "2019-08-30"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 9009,
+            "accuracy": 0.5205905205905206,
+            "auc_roc": 0.5109864152955873,
+            "f1": 0.5811269517990496,
+            "precision": 0.5302654867256638,
+            "recall": 0.6427805192018881,
+            "log_loss": 0.6971178175939335,
+            "positive_prediction_rate": 0.6271506271506272,
+            "true_class_0_rate": 0.4826284826284827,
+            "true_class_1_rate": 0.5173715173715173,
+            "predicted_class_0_rate": 0.3728493728493728,
+            "predicted_class_1_rate": 0.6271506271506272,
+            "confusion_matrix": [
+              [
+                1694,
+                2654
+              ],
+              [
+                1665,
+                2996
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "cfo_to_net_income"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 12.952769283044512,
+            "quick_ratio": 21.495073054706083,
+            "cash_ratio": 16.371049949031597,
+            "working_capital_to_total_assets": 17.730207271491675,
+            "debt_to_equity": 13.625552157662248,
+            "debt_to_assets": 13.326537546721031,
+            "long_term_debt_ratio": 18.38939857288481,
+            "gross_margin": 100.0,
+            "operating_margin": 18.66123003737683,
+            "net_margin": 12.952769283044512,
+            "roa": 31.28100577641862,
+            "roe": 28.895684675501187,
+            "asset_turnover": 31.28100577641862,
+            "inventory_turnover": 38.1107713217805,
+            "receivables_turnover": 41.40672782874618,
+            "revenue_growth_qoq": 30.329595650696568,
+            "revenue_growth_yoy": 64.21338769962624,
+            "earnings_growth_qoq": 30.76452599388379,
+            "earnings_growth_yoy": 65.4026503567788,
+            "cfo_to_net_income": 13.700305810397554,
+            "accruals_ratio": 31.28100577641862
+          }
+        },
+        {
+          "fold_number": 2,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2019-08-19",
+            "purge_start_date": "2019-08-20",
+            "purge_end_date": "2019-08-30",
+            "validation_start_date": "2019-09-03",
+            "validation_end_date": "2020-09-30"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 9009,
+            "accuracy": 0.5043845043845044,
+            "auc_roc": 0.5094612519842319,
+            "f1": 0.4304120423523409,
+            "precision": 0.5023823704586063,
+            "recall": 0.37647846462843115,
+            "log_loss": 0.6970299464859551,
+            "positive_prediction_rate": 0.37273837273837274,
+            "true_class_0_rate": 0.5026085026085025,
+            "true_class_1_rate": 0.4973914973914974,
+            "predicted_class_0_rate": 0.6272616272616273,
+            "predicted_class_1_rate": 0.37273837273837274,
+            "confusion_matrix": [
+              [
+                2857,
+                1671
+              ],
+              [
+                2794,
+                1687
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "cfo_to_net_income"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 10.200640701399427,
+            "quick_ratio": 20.102006407013995,
+            "cash_ratio": 13.324060023604789,
+            "working_capital_to_total_assets": 14.108076209745404,
+            "debt_to_equity": 11.254425897824987,
+            "debt_to_assets": 9.707469229472263,
+            "long_term_debt_ratio": 15.612881470241105,
+            "gross_margin": 100.0,
+            "operating_margin": 15.161861406170965,
+            "net_margin": 10.145843871185297,
+            "roa": 23.090541224076887,
+            "roe": 21.57730568200978,
+            "asset_turnover": 23.090541224076887,
+            "inventory_turnover": 32.5198111616928,
+            "receivables_turnover": 35.7148878772551,
+            "revenue_growth_qoq": 23.090541224076887,
+            "revenue_growth_yoy": 46.04619794301129,
+            "earnings_growth_qoq": 23.36031023436183,
+            "earnings_growth_yoy": 47.97251728207722,
+            "cfo_to_net_income": 11.199629067610859,
+            "accruals_ratio": 23.090541224076887
+          }
+        },
+        {
+          "fold_number": 3,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2020-09-17",
+            "purge_start_date": "2020-09-18",
+            "purge_end_date": "2020-09-30",
+            "validation_start_date": "2020-10-01",
+            "validation_end_date": "2021-10-29"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 9009,
+            "accuracy": 0.4834054834054834,
+            "auc_roc": 0.4822460599962553,
+            "f1": 0.45934014869888473,
+            "precision": 0.4629976580796253,
+            "recall": 0.4557399723374827,
+            "log_loss": 0.7013507565661741,
+            "positive_prediction_rate": 0.473970473970474,
+            "true_class_0_rate": 0.5184815184815185,
+            "true_class_1_rate": 0.48151848151848153,
+            "predicted_class_0_rate": 0.526029526029526,
+            "predicted_class_1_rate": 0.473970473970474,
+            "confusion_matrix": [
+              [
+                2378,
+                2293
+              ],
+              [
+                2361,
+                1977
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "roe",
+            "earnings_growth_qoq",
+            "cfo_to_net_income"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 9.928818012403386,
+            "quick_ratio": 20.441145021843397,
+            "cash_ratio": 12.9991140439312,
+            "working_capital_to_total_assets": 13.604008187456085,
+            "debt_to_equity": 10.692573244126722,
+            "debt_to_assets": 9.773011945131824,
+            "long_term_debt_ratio": 15.90749396633367,
+            "gross_margin": 100.0,
+            "operating_margin": 15.192619069440624,
+            "net_margin": 10.267925335288547,
+            "roa": 20.42586991720893,
+            "roe": 19.368832676503832,
+            "asset_turnover": 20.42586991720893,
+            "inventory_turnover": 30.275257385513093,
+            "receivables_turnover": 33.42498396114013,
+            "revenue_growth_qoq": 20.105092719885132,
+            "revenue_growth_yoy": 37.91891974460025,
+            "earnings_growth_qoq": 19.67433476919317,
+            "earnings_growth_yoy": 39.04927748755079,
+            "cfo_to_net_income": 11.031680567011884,
+            "accruals_ratio": 20.42586991720893
+          }
+        },
+        {
+          "fold_number": 4,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2021-10-18",
+            "purge_start_date": "2021-10-19",
+            "purge_end_date": "2021-10-29",
+            "validation_start_date": "2021-11-01",
+            "validation_end_date": "2022-11-29"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 8976,
+            "accuracy": 0.4871880570409982,
+            "auc_roc": 0.49979403707928344,
+            "f1": 0.4984199629508554,
+            "precision": 0.4890932420872541,
+            "recall": 0.508109309042435,
+            "log_loss": 0.6993222229163523,
+            "positive_prediction_rate": 0.5209447415329769,
+            "true_class_0_rate": 0.49855169340463457,
+            "true_class_1_rate": 0.5014483065953654,
+            "predicted_class_0_rate": 0.4790552584670231,
+            "predicted_class_1_rate": 0.5209447415329769,
+            "confusion_matrix": [
+              [
+                2086,
+                2389
+              ],
+              [
+                2214,
+                2287
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "quick_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "roa",
+            "roe",
+            "asset_turnover",
+            "revenue_growth_qoq",
+            "earnings_growth_qoq",
+            "cfo_to_net_income",
+            "accruals_ratio"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 8.538163001293661,
+            "quick_ratio": 19.397728906137704,
+            "cash_ratio": 10.945809975564181,
+            "working_capital_to_total_assets": 11.659719227636433,
+            "debt_to_equity": 9.323942312299364,
+            "debt_to_assets": 8.633989746538258,
+            "long_term_debt_ratio": 14.12007091179148,
+            "gross_margin": 100.0,
+            "operating_margin": 14.062574864644722,
+            "net_margin": 8.892721958698672,
+            "roa": 17.59379042690815,
+            "roe": 17.294331848018782,
+            "asset_turnover": 17.59379042690815,
+            "inventory_turnover": 27.959848593742514,
+            "receivables_turnover": 31.083800488716403,
+            "revenue_growth_qoq": 17.4572373149346,
+            "revenue_growth_yoy": 31.313784677303435,
+            "earnings_growth_qoq": 17.500359350294666,
+            "earnings_growth_yoy": 32.24330410617603,
+            "cfo_to_net_income": 9.915672464184754,
+            "accruals_ratio": 17.59379042690815
+          }
+        },
+        {
+          "fold_number": 5,
+          "date_metadata": {
+            "train_start_date": "2015-07-31",
+            "train_end_date": "2022-11-15",
+            "purge_start_date": "2022-11-16",
+            "purge_end_date": "2022-11-29",
+            "validation_start_date": "2022-11-30",
+            "validation_end_date": "2023-12-29"
+          },
+          "metrics": {
+            "threshold": 0.5,
+            "row_count": 8976,
+            "accuracy": 0.49576648841354726,
+            "auc_roc": 0.4917879960918118,
+            "f1": 0.4964396973742768,
+            "precision": 0.5082004555808656,
+            "recall": 0.4852109612875163,
+            "log_loss": 0.6977550532505821,
+            "positive_prediction_rate": 0.4890819964349376,
+            "true_class_0_rate": 0.48774509803921573,
+            "true_class_1_rate": 0.5122549019607843,
+            "predicted_class_0_rate": 0.5109180035650625,
+            "predicted_class_1_rate": 0.4890819964349376,
+            "confusion_matrix": [
+              [
+                2219,
+                2159
+              ],
+              [
+                2367,
+                2231
+              ]
+            ]
+          },
+          "usable_feature_columns": [
+            "current_ratio",
+            "quick_ratio",
+            "cash_ratio",
+            "working_capital_to_total_assets",
+            "debt_to_equity",
+            "debt_to_assets",
+            "long_term_debt_ratio",
+            "operating_margin",
+            "net_margin",
+            "roa",
+            "roe",
+            "asset_turnover",
+            "revenue_growth_qoq",
+            "earnings_growth_qoq",
+            "cfo_to_net_income",
+            "accruals_ratio"
+          ],
+          "train_missingness_by_feature_pct": {
+            "current_ratio": 7.721124650025632,
+            "quick_ratio": 18.596947829173075,
+            "cash_ratio": 9.70266966363027,
+            "working_capital_to_total_assets": 10.449938877715999,
+            "debt_to_equity": 8.399384833786822,
+            "debt_to_assets": 7.421428289759061,
+            "long_term_debt_ratio": 13.011159746046769,
+            "gross_margin": 100.0,
+            "operating_margin": 13.233960329665997,
+            "net_margin": 8.062226428486928,
+            "roa": 15.276627627272369,
+            "roe": 14.972987893844394,
+            "asset_turnover": 15.276627627272369,
+            "inventory_turnover": 25.896131550928665,
+            "receivables_turnover": 29.00350960211365,
+            "revenue_growth_qoq": 15.306202925982888,
+            "revenue_growth_yoy": 27.516857920264993,
+            "earnings_growth_qoq": 15.901652273354628,
+            "earnings_growth_yoy": 28.857604795141768,
+            "cfo_to_net_income": 9.696754603888166,
+            "accruals_ratio": 15.276627627272369
+          }
+        }
+      ],
+      "cv_summary": {
+        "fold_count": 5,
+        "accuracy_mean": 0.4982670107670108,
+        "accuracy_std": 0.013308821452113179,
+        "auc_roc_mean": 0.49885515208943393,
+        "auc_roc_std": 0.01082908159572162,
+        "f1_mean": 0.4931477606350815,
+        "f1_std": 0.05071034611575675,
+        "precision_mean": 0.498587842586403,
+        "precision_std": 0.022212980801471917,
+        "recall_mean": 0.49366384529955065,
+        "recall_std": 0.08681766950343943,
+        "log_loss_mean": 0.6985151593625993,
+        "log_loss_std": 0.001638788924154125,
+        "positive_prediction_rate_mean": 0.4967772423654777,
+        "positive_prediction_rate_std": 0.08191006549780375,
+        "true_class_0_rate_mean": 0.49800305903247083,
+        "true_class_0_rate_std": 0.01250985031847969,
+        "true_class_1_rate_mean": 0.5019969409675291,
+        "true_class_1_rate_std": 0.012509850318479695,
+        "predicted_class_0_rate_mean": 0.5032227576345223,
+        "predicted_class_0_rate_std": 0.08191006549780376,
+        "predicted_class_1_rate_mean": 0.4967772423654777,
+        "predicted_class_1_rate_std": 0.08191006549780375
+      }
+    }
+  },
+  "best_model": {
+    "model_name": "random_forest",
+    "cv_summary": {
+      "fold_count": 5,
+      "accuracy_mean": 0.5104886126944951,
+      "accuracy_std": 0.011694667221638047,
+      "auc_roc_mean": 0.5027390297869027,
+      "auc_roc_std": 0.006958000880630779,
+      "f1_mean": 0.48006487508156515,
+      "f1_std": 0.05720393198129853,
+      "precision_mean": 0.5124806958213727,
+      "precision_std": 0.016857904228473605,
+      "recall_mean": 0.4593458082565648,
+      "recall_std": 0.0925201490417159,
+      "log_loss_mean": 0.6959409207922262,
+      "log_loss_std": 0.0007791487840858477,
+      "positive_prediction_rate_mean": 0.4501206310029839,
+      "positive_prediction_rate_std": 0.08924265079220857,
+      "true_class_0_rate_mean": 0.49800305903247083,
+      "true_class_0_rate_std": 0.01250985031847969,
+      "true_class_1_rate_mean": 0.5019969409675291,
+      "true_class_1_rate_std": 0.012509850318479695,
+      "predicted_class_0_rate_mean": 0.5498793689970161,
+      "predicted_class_0_rate_std": 0.08924265079220857,
+      "predicted_class_1_rate_mean": 0.4501206310029839,
+      "predicted_class_1_rate_std": 0.08924265079220857
+    },
+    "holdout": {
+      "holdout_metrics": {
+        "threshold": 0.5,
+        "row_count": 8533,
+        "accuracy": 0.5113090355091996,
+        "auc_roc": 0.5205069347254985,
+        "f1": 0.38910049809551717,
+        "precision": 0.532051282051282,
+        "recall": 0.3066974595842956,
+        "log_loss": 0.6934700351195356,
+        "positive_prediction_rate": 0.292511426227587,
+        "true_class_0_rate": 0.4925583030587132,
+        "true_class_1_rate": 0.5074416969412868,
+        "predicted_class_0_rate": 0.707488573772413,
+        "predicted_class_1_rate": 0.292511426227587,
+        "confusion_matrix": [
+          [
+            3035,
+            1168
+          ],
+          [
+            3002,
+            1328
+          ]
+        ]
+      },
+      "usable_feature_columns": [
+        "current_ratio",
+        "quick_ratio",
+        "cash_ratio",
+        "working_capital_to_total_assets",
+        "debt_to_equity",
+        "debt_to_assets",
+        "long_term_debt_ratio",
+        "operating_margin",
+        "net_margin",
+        "roa",
+        "roe",
+        "asset_turnover",
+        "revenue_growth_qoq",
+        "earnings_growth_qoq",
+        "cfo_to_net_income",
+        "accruals_ratio"
+      ],
+      "train_missingness_by_feature_pct": {
+        "current_ratio": 7.240258652460883,
+        "quick_ratio": 18.125774784735484,
+        "cash_ratio": 8.923844942540288,
+        "working_capital_to_total_assets": 9.959124870171207,
+        "debt_to_equity": 7.912017958253761,
+        "debt_to_assets": 7.386001943243876,
+        "long_term_debt_ratio": 12.59088015545951,
+        "gross_margin": 100.0,
+        "operating_margin": 13.02811002780849,
+        "net_margin": 7.722719201259758,
+        "roa": 14.078466847589372,
+        "roe": 13.676416390256977,
+        "asset_turnover": 14.078466847589372,
+        "inventory_turnover": 24.779709853586628,
+        "receivables_turnover": 27.87549837504607,
+        "revenue_growth_qoq": 13.95952692062854,
+        "revenue_growth_yoy": 24.285522833115554,
+        "earnings_growth_qoq": 14.966328274198412,
+        "earnings_growth_yoy": 26.134954936844572,
+        "cfo_to_net_income": 10.252286661976077,
+        "accruals_ratio": 14.078466847589372
+      },
+      "date_metadata": {
+        "train_start_date": "2015-07-31",
+        "train_end_date": "2023-12-15",
+        "purge_start_date": "2023-12-18",
+        "purge_end_date": "2023-12-29",
+        "validation_start_date": "2024-01-02",
+        "validation_end_date": "2024-12-31"
+      }
+    }
+  }
+}
