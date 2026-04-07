@@ -614,6 +614,163 @@ Pause SEC-filing sentiment iteration here and discuss with teammate whether the 
 
 ---
 
+## Event V1 Experimental Lane
+
+### Experiment ID
+EXP-006
+
+### Date
+2026-04-07
+
+### Objective
+Validate the new additive `event_v1` lane and test whether event-aware framing, redesigned Layer 2 controls, or event-driven SEC sentiment can beat the event-aware baseline.
+
+### Dataset Version
+- `data/interim/labels/labels_event_v1.parquet`
+- `data/interim/features/layer2_market_features_v2.parquet`
+- `data/interim/features/layer3_sec_sentiment_event_v1.parquet`
+- `data/processed/modeling/event_v1_layer1_panel.parquet`
+- `data/processed/modeling/event_v1_layer1_layer2_panel.parquet`
+- `data/processed/modeling/event_v1_full_panel.parquet`
+- `reports/results/event_v1_layer1_metrics.json`
+- `reports/results/event_v1_layer1_layer2_metrics.json`
+- `reports/results/event_v1_full_metrics.json`
+- `reports/results/event_v1_summary.md`
+
+### Universe
+34 Consumer Staples names stored in `src/universe.py`
+
+### Date Range
+2015-01-01 to 2024-12-31
+
+### Feature Set
+Comparison setups:
+- `event_v1_layer1`: Layer 1 fundamentals only on the new event-aware target
+- `event_v1_layer1_layer2`: Layer 1 + redesigned Layer 2 v2 market/event controls
+- `event_v1_full`: Layer 1 + Layer 2 v2 + event-driven SEC sentiment features
+
+Layer 2 v2 features:
+- rel_return_5d
+- rel_return_10d
+- rel_return_21d
+- realized_vol_21d
+- realized_vol_63d
+- vol_ratio_21d_63d
+- beta_63d_to_sector
+- overnight_gap_1d
+- abs_return_shock_1d
+- drawdown_21d
+- return_zscore_21d
+- volume_ratio_20d
+- log_volume
+- abnormal_volume_flag
+
+Event-driven SEC sentiment features:
+- sec_event_score_latest
+- sec_event_abs_latest
+- sec_event_days_since_filing
+- sec_event_decay_30d
+- sec_event_score_decayed
+- sec_event_delta_prev
+- sec_event_abs_delta_prev
+- sec_event_neg_to_pos_flip
+- sec_event_pos_to_neg_flip
+- sec_event_uncertainty
+
+Interaction features:
+- sec_event_delta_x_vol21
+- sec_event_magnitude_x_days_since
+- sec_event_negative_x_abnormal_volume
+
+### Target
+`target_event_v1 = 1 if 5-day excess return > 0, else 0`
+
+Excess return definition:
+- stock 5-day forward return minus leave-one-out equal-weight 5-day forward return of the other Consumer Staples names in the universe
+
+### Validation
+Purged expanding-window validation on pre-holdout data with one untouched 2024 holdout:
+- first `756` trading dates used as minimum training warmup
+- `5` contiguous expanding validation folds before holdout
+- purge gap of `9` trading dates before each validation block and before the 2024 holdout
+- final holdout = all trading dates in calendar year 2024
+
+### Models
+- Logistic Regression
+- Random Forest
+- HistGradientBoosting
+
+### Preprocessing
+- Built event-aware labels from `adj_close` using 5-day forward excess returns
+- Used the existing Layer 1 modeling panel as a read-only base
+- Median imputation
+- Standard scaling for logistic regression only
+- Drop features with more than `20%` missingness in train folds only
+- Clip numeric features using train-fold `1%` and `99%` quantiles
+- Select best model by mean CV AUC-ROC with mean CV log loss as tie-breaker
+- Refit the selected model on all pre-holdout data and evaluate once on 2024
+
+### Hyperparameters
+- Logistic Regression:
+  - `solver = lbfgs`
+  - `max_iter = 1000`
+  - `class_weight = balanced`
+- Random Forest:
+  - `n_estimators = 300`
+  - `max_depth = 8`
+  - `min_samples_leaf = 20`
+  - `class_weight = balanced_subsample`
+- HistGradientBoosting:
+  - `max_depth = 6`
+  - `learning_rate = 0.05`
+  - `max_iter = 300`
+  - `min_samples_leaf = 50`
+
+### Results
+Labeling and panel construction:
+- Event label rows: `85,418`
+- Event label target balance: class_0=`49.87%`, class_1=`50.13%`
+- `event_v1` panel rows: `68,524`
+- Tickers: `34`
+- Event panel date range: `2015-07-31` to `2024-12-31`
+
+Best run by setup:
+- `event_v1_layer1`: `Random Forest`
+  - CV AUC-ROC: `0.5027`
+  - CV log loss: `0.6959`
+  - 2024 holdout AUC-ROC: `0.5205`
+  - 2024 holdout log loss: `0.6935`
+- `event_v1_layer1_layer2`: `HistGradientBoosting`
+  - CV AUC-ROC: `0.5086`
+  - CV log loss: `0.7196`
+  - 2024 holdout AUC-ROC: `0.5175`
+  - 2024 holdout log loss: `0.7058`
+- `event_v1_full`: `HistGradientBoosting`
+  - CV AUC-ROC: `0.5087`
+  - CV log loss: `0.7257`
+  - 2024 holdout AUC-ROC: `0.5028`
+  - 2024 holdout log loss: `0.7104`
+
+### Observations
+- The `event_v1` lane is stable and reproducible end-to-end. Local reruns reproduced the saved metrics.
+- Event-aware reframing alone did not create a stronger baseline than the locked Layer 1 benchmark.
+- Layer 2 v2 produced a small CV AUC lift, but calibration worsened and the holdout did not support calling it a real improvement.
+- Event-driven SEC sentiment added almost no incremental discrimination and clearly worsened holdout log loss.
+- Threshold metrics such as F1 and recall improved in some runs, but the probability-ranking metrics still indicate weak signal.
+
+### Problems
+- `gross_margin` remains fully missing in the inherited Layer 1 feature base.
+- Several Layer 1 accounting features are still too sparse to be consistently useful.
+- The current event-aware Layer 2 and Layer 3 additions do not justify promotion beyond experimental status.
+
+### Decision
+Keep the locked Layer 1 benchmark as the official project benchmark. Keep `event_v1_layer1` as the clean event-aware experimental baseline. Do not advance Layer 2 v2 or the current event-driven SEC sentiment features as winning additions.
+
+### Next Step
+Test one higher-information event dataset on top of `event_v1_layer1`, with analyst estimate revisions / earnings surprise as the highest-priority next candidate. Other strong follow-ups are 8-K or guidance event flags and earnings-call transcript Q&A features.
+
+---
+
 ## Current Project Takeaways
 
 ### Benchmark Hierarchy
