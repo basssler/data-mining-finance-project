@@ -45,6 +45,7 @@ from src.config_event_v1 import (
     TARGET_COLUMN,
     ensure_event_v1_directories,
     get_candidate_feature_columns,
+    get_markdown_output_path,
     get_metrics_output_path,
     get_panel_path,
     get_predictions_output_path,
@@ -56,6 +57,13 @@ from src.evaluate_event_v1 import (
     write_markdown_report,
 )
 from src.validation_event_v1 import make_event_v1_splits
+
+ANALYST_WIN_CRITERIA = {
+    "cv_auc_gt": 0.5027,
+    "cv_log_loss_lt": 0.6959,
+    "holdout_auc_gte": 0.5205,
+    "holdout_log_loss_lte": 0.6935,
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -427,6 +435,114 @@ def build_metrics_payload(
     }
 
 
+def format_metric(value: float | None) -> str:
+    """Format a scalar metric for Markdown output."""
+    if value is None:
+        return "n/a"
+    return f"{value:.4f}"
+
+
+def load_layer1_baseline_record() -> dict | None:
+    """Load the saved event_v1_layer1 benchmark metrics for comparison."""
+    if not EVENT_V1_LAYER1_METRICS_PATH.exists():
+        return None
+
+    payload = json.loads(EVENT_V1_LAYER1_METRICS_PATH.read_text(encoding="utf-8"))
+    best_model = payload["best_model"]
+    return {
+        "panel_name": payload["panel_name"],
+        "model_name": best_model["model_name"],
+        "cv_auc": best_model["cv_summary"]["auc_roc_mean"],
+        "cv_log_loss": best_model["cv_summary"]["log_loss_mean"],
+        "holdout_auc": best_model["holdout"]["holdout_metrics"]["auc_roc"],
+        "holdout_log_loss": best_model["holdout"]["holdout_metrics"]["log_loss"],
+    }
+
+
+def build_layer1_comparison(best_model_payload: dict) -> dict:
+    """Build the explicit pass/fail comparison against event_v1_layer1."""
+    current_record = {
+        "cv_auc": best_model_payload["cv_summary"]["auc_roc_mean"],
+        "cv_log_loss": best_model_payload["cv_summary"]["log_loss_mean"],
+        "holdout_auc": best_model_payload["holdout"]["holdout_metrics"]["auc_roc"],
+        "holdout_log_loss": best_model_payload["holdout"]["holdout_metrics"]["log_loss"],
+    }
+    baseline_record = load_layer1_baseline_record()
+    pass_fail = {
+        "cv_auc_gt_0_5027": bool(current_record["cv_auc"] > ANALYST_WIN_CRITERIA["cv_auc_gt"]),
+        "cv_log_loss_lt_0_6959": bool(
+            current_record["cv_log_loss"] < ANALYST_WIN_CRITERIA["cv_log_loss_lt"]
+        ),
+        "holdout_auc_gte_0_5205": bool(
+            current_record["holdout_auc"] >= ANALYST_WIN_CRITERIA["holdout_auc_gte"]
+        ),
+        "holdout_log_loss_lte_0_6935": bool(
+            current_record["holdout_log_loss"] <= ANALYST_WIN_CRITERIA["holdout_log_loss_lte"]
+        ),
+    }
+    return {
+        "baseline_event_v1_layer1": baseline_record,
+        "current_panel": current_record,
+        "win_criteria": ANALYST_WIN_CRITERIA,
+        "pass_fail": pass_fail,
+        "all_criteria_passed": all(pass_fail.values()),
+    }
+
+
+def build_markdown_report(
+    panel_name: str,
+    best_model_name: str,
+    metrics_payload: dict,
+) -> str:
+    """Build a concise Markdown report for one event_v1 run."""
+    best_model_payload = metrics_payload["best_model"]
+    best_model_cv = best_model_payload["cv_summary"]
+    best_model_holdout = best_model_payload["holdout"]["holdout_metrics"]
+
+    lines = [
+        f"# {panel_name}",
+        "",
+        f"- Best model: `{best_model_name}`",
+        f"- Panel path: `{metrics_payload['panel_path']}`",
+        f"- Candidate feature count: `{len(metrics_payload['candidate_feature_columns'])}`",
+        f"- CV AUC: `{format_metric(best_model_cv['auc_roc_mean'])}`",
+        f"- CV log loss: `{format_metric(best_model_cv['log_loss_mean'])}`",
+        f"- 2024 holdout AUC: `{format_metric(best_model_holdout['auc_roc'])}`",
+        f"- 2024 holdout log loss: `{format_metric(best_model_holdout['log_loss'])}`",
+    ]
+
+    comparison = metrics_payload.get("comparison_to_event_v1_layer1")
+    if comparison is not None:
+        baseline = comparison["baseline_event_v1_layer1"]
+        current = comparison["current_panel"]
+        lines.extend(
+            [
+                "",
+                "## Comparison vs event_v1_layer1",
+                "",
+                "| Metric | event_v1_layer1 | event_v1_layer1_analyst |",
+                "|---|---:|---:|",
+                f"| Mean CV AUC | {format_metric(baseline['cv_auc']) if baseline else 'n/a'} | {format_metric(current['cv_auc'])} |",
+                f"| Mean CV log loss | {format_metric(baseline['cv_log_loss']) if baseline else 'n/a'} | {format_metric(current['cv_log_loss'])} |",
+                f"| 2024 holdout AUC | {format_metric(baseline['holdout_auc']) if baseline else 'n/a'} | {format_metric(current['holdout_auc'])} |",
+                f"| 2024 holdout log loss | {format_metric(baseline['holdout_log_loss']) if baseline else 'n/a'} | {format_metric(current['holdout_log_loss'])} |",
+                "",
+                "## Win Criteria",
+                "",
+                "| Criterion | Result |",
+                "|---|---|",
+                f"| CV AUC > 0.5027 | {'PASS' if comparison['pass_fail']['cv_auc_gt_0_5027'] else 'FAIL'} |",
+                f"| CV log loss < 0.6959 | {'PASS' if comparison['pass_fail']['cv_log_loss_lt_0_6959'] else 'FAIL'} |",
+                f"| 2024 holdout AUC >= 0.5205 | {'PASS' if comparison['pass_fail']['holdout_auc_gte_0_5205'] else 'FAIL'} |",
+                f"| 2024 holdout log loss <= 0.6935 | {'PASS' if comparison['pass_fail']['holdout_log_loss_lte_0_6935'] else 'FAIL'} |",
+                "",
+                f"- Overall result: {'PASS' if comparison['all_criteria_passed'] else 'FAIL'}",
+            ]
+        )
+
+    return "\n".join(lines) + "\n"
+
+
 def maybe_write_family_summary() -> None:
     """Write the family-level summary once all three event_v1 runs exist."""
     metric_paths = {
@@ -501,6 +617,7 @@ def main() -> None:
 
     panel_path = get_panel_path(args.panel)
     metrics_output_path = get_metrics_output_path(args.panel)
+    markdown_output_path = get_markdown_output_path(args.panel)
     predictions_output_path = get_predictions_output_path(args.panel)
     candidate_features = get_candidate_feature_columns(args.panel)
 
@@ -549,8 +666,22 @@ def main() -> None:
         holdout_payload=holdout_payload,
         threshold=args.threshold,
     )
+    if args.panel == "event_v1_layer1_analyst":
+        metrics_payload["comparison_to_event_v1_layer1"] = build_layer1_comparison(
+            metrics_payload["best_model"]
+        )
+
     print(f"Saving metrics to: {metrics_output_path}")
     write_json_report(metrics_payload, metrics_output_path)
+    print(f"Saving Markdown report to: {markdown_output_path}")
+    write_markdown_report(
+        build_markdown_report(
+            panel_name=args.panel,
+            best_model_name=best_model_name,
+            metrics_payload=metrics_payload,
+        ),
+        markdown_output_path,
+    )
 
     maybe_write_family_summary()
     print("\nSaved event_v1 training outputs.")

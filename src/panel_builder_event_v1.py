@@ -14,7 +14,10 @@ if __package__ is None or __package__ == "":
         sys.path.insert(0, str(project_root))
 
 from src.config_event_v1 import (
+    ANALYST_EVENT_FEATURE_COLUMNS,
+    ANALYST_EVENT_V1_OUTPUT_PATH,
     EVENT_V1_FULL_PANEL_PATH,
+    EVENT_V1_LAYER1_ANALYST_PANEL_PATH,
     EVENT_V1_LAYER1_LAYER2_PANEL_PATH,
     EVENT_V1_LAYER1_PANEL_PATH,
     IDENTIFIER_COLUMNS,
@@ -39,6 +42,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build event_v1 modeling panels.")
     parser.add_argument("--panel", choices=PANEL_CHOICES, required=True)
     parser.add_argument("--labels-path", default=str(LABEL_OUTPUT_PATH))
+    parser.add_argument("--analyst-path", default=str(ANALYST_EVENT_V1_OUTPUT_PATH))
     parser.add_argument("--layer2-path", default=str(MARKET_FEATURE_V2_OUTPUT_PATH))
     parser.add_argument("--layer3-path", default=str(SENTIMENT_EVENT_V1_OUTPUT_PATH))
     parser.add_argument("--output-path", default=None)
@@ -140,6 +144,7 @@ def add_layer3_interactions(df: pd.DataFrame) -> pd.DataFrame:
 def build_event_v1_panel(
     layer1_path: str,
     labels_path: str,
+    analyst_path: str | None = None,
     layer2_path: str | None = None,
     layer3_path: str | None = None,
     output_path: str | None = None,
@@ -167,6 +172,22 @@ def build_event_v1_panel(
         how="left",
         validate="one_to_one",
     )
+
+    if analyst_path is not None:
+        analyst_df = prepare_daily_feature_table(
+            load_parquet(
+                Path(analyst_path),
+                ["ticker", "date"] + ANALYST_EVENT_FEATURE_COLUMNS,
+                "event_v1 analyst layer",
+            ),
+            ANALYST_EVENT_FEATURE_COLUMNS,
+        )
+        panel_df = panel_df.merge(
+            analyst_df[IDENTIFIER_COLUMNS + ANALYST_EVENT_FEATURE_COLUMNS],
+            on=IDENTIFIER_COLUMNS,
+            how="left",
+            validate="one_to_one",
+        )
 
     if layer2_path is not None:
         layer2_df = prepare_daily_feature_table(
@@ -246,14 +267,20 @@ def main() -> None:
 
     default_output_paths = {
         "event_v1_layer1": EVENT_V1_LAYER1_PANEL_PATH,
+        "event_v1_layer1_analyst": EVENT_V1_LAYER1_ANALYST_PANEL_PATH,
         "event_v1_layer1_layer2": EVENT_V1_LAYER1_LAYER2_PANEL_PATH,
         "event_v1_full": EVENT_V1_FULL_PANEL_PATH,
     }
     output_path = Path(args.output_path) if args.output_path else default_output_paths[args.panel]
 
+    analyst_path = None
     layer2_path = None
     layer3_path = None
     feature_columns = list(LAYER1_FEATURE_COLUMNS)
+
+    if args.panel == "event_v1_layer1_analyst":
+        analyst_path = args.analyst_path
+        feature_columns += ANALYST_EVENT_FEATURE_COLUMNS
 
     if args.panel in {"event_v1_layer1_layer2", "event_v1_full"}:
         layer2_path = args.layer2_path
@@ -267,6 +294,7 @@ def main() -> None:
     panel_df = build_event_v1_panel(
         layer1_path=str(LAYER1_BASE_PANEL_PATH),
         labels_path=args.labels_path,
+        analyst_path=analyst_path,
         layer2_path=layer2_path,
         layer3_path=layer3_path,
         output_path=str(output_path),

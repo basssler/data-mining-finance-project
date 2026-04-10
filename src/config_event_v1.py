@@ -13,12 +13,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.paths import INTERIM_DATA_DIR, PROCESSED_DATA_DIR, PROJECT_ROOT
+from src.paths import DATA_DIR, INTERIM_DATA_DIR, PROCESSED_DATA_DIR, PROJECT_ROOT, RAW_DATA_DIR
 
 EVENT_V1_NAME = "event_v1"
 DEFAULT_PANEL_NAME = "event_v1_layer1"
 PANEL_CHOICES = [
     "event_v1_layer1",
+    "event_v1_layer1_analyst",
     "event_v1_layer1_layer2",
     "event_v1_full",
 ]
@@ -117,18 +118,38 @@ LAYER3_EVENT_INTERACTION_COLUMNS = [
     "sec_event_negative_x_abnormal_volume",
 ]
 
+ANALYST_EVENT_FEATURE_COLUMNS = [
+    "analyst_event_count_1d",
+    "analyst_event_count_5d",
+    "analyst_upgrade_count_5d",
+    "analyst_downgrade_count_5d",
+    "analyst_reiterate_count_5d",
+    "analyst_pt_up_count_5d",
+    "analyst_pt_down_count_5d",
+    "analyst_net_revision_score_5d",
+    "analyst_mean_sentiment_1d",
+    "analyst_mean_sentiment_5d",
+    "analyst_sentiment_std_5d",
+    "analyst_days_since_event",
+]
+
 PRICE_INPUT_PATH = INTERIM_DATA_DIR / "prices" / "prices_with_labels.parquet"
 LAYER1_BASE_PANEL_PATH = PROCESSED_DATA_DIR / "modeling" / "layer1_modeling_panel.parquet"
 FULL_SENTIMENT_INPUT_PATH = INTERIM_DATA_DIR / "features" / "layer3_sec_sentiment_features.parquet"
 MDA_SENTIMENT_INPUT_PATH = INTERIM_DATA_DIR / "features" / "layer3_sec_sentiment_mda_features.parquet"
+ANALYST_INPUT_PATH = RAW_DATA_DIR / "analyst" / "analyst_ratings_processed.csv"
 
 LABEL_OUTPUT_PATH = INTERIM_DATA_DIR / "labels" / "labels_event_v1.parquet"
 MARKET_FEATURE_V2_OUTPUT_PATH = INTERIM_DATA_DIR / "features" / "layer2_market_features_v2.parquet"
 SENTIMENT_EVENT_V1_OUTPUT_PATH = (
     INTERIM_DATA_DIR / "features" / "layer3_sec_sentiment_event_v1.parquet"
 )
+ANALYST_EVENT_V1_OUTPUT_PATH = INTERIM_DATA_DIR / "analyst" / "layer3_analyst_event_v1.parquet"
 
 EVENT_V1_LAYER1_PANEL_PATH = PROCESSED_DATA_DIR / "modeling" / "event_v1_layer1_panel.parquet"
+EVENT_V1_LAYER1_ANALYST_PANEL_PATH = (
+    DATA_DIR / "modeling" / "event_v1" / "event_v1_layer1_analyst_panel.parquet"
+)
 EVENT_V1_LAYER1_LAYER2_PANEL_PATH = (
     PROCESSED_DATA_DIR / "modeling" / "event_v1_layer1_layer2_panel.parquet"
 )
@@ -137,12 +158,17 @@ EVENT_V1_FULL_PANEL_PATH = PROCESSED_DATA_DIR / "modeling" / "event_v1_full_pane
 REPORTS_DIR = PROJECT_ROOT / "reports"
 REPORTS_RESULTS_DIR = REPORTS_DIR / "results"
 EVENT_V1_LAYER1_METRICS_PATH = REPORTS_RESULTS_DIR / "event_v1_layer1_metrics.json"
+EVENT_V1_LAYER1_ANALYST_JSON_PATH = REPORTS_RESULTS_DIR / "event_v1_layer1_analyst.json"
+EVENT_V1_LAYER1_ANALYST_MD_PATH = REPORTS_RESULTS_DIR / "event_v1_layer1_analyst.md"
 EVENT_V1_LAYER1_LAYER2_METRICS_PATH = (
     REPORTS_RESULTS_DIR / "event_v1_layer1_layer2_metrics.json"
 )
 EVENT_V1_FULL_METRICS_PATH = REPORTS_RESULTS_DIR / "event_v1_full_metrics.json"
 
 EVENT_V1_LAYER1_PREDICTIONS_PATH = REPORTS_RESULTS_DIR / "event_v1_layer1_predictions.parquet"
+EVENT_V1_LAYER1_ANALYST_PREDICTIONS_PATH = (
+    REPORTS_RESULTS_DIR / "event_v1_layer1_analyst_predictions.parquet"
+)
 EVENT_V1_LAYER1_LAYER2_PREDICTIONS_PATH = (
     REPORTS_RESULTS_DIR / "event_v1_layer1_layer2_predictions.parquet"
 )
@@ -156,7 +182,9 @@ def ensure_event_v1_directories() -> None:
         LABEL_OUTPUT_PATH.parent,
         MARKET_FEATURE_V2_OUTPUT_PATH.parent,
         SENTIMENT_EVENT_V1_OUTPUT_PATH.parent,
+        ANALYST_EVENT_V1_OUTPUT_PATH.parent,
         EVENT_V1_LAYER1_PANEL_PATH.parent,
+        EVENT_V1_LAYER1_ANALYST_PANEL_PATH.parent,
         REPORTS_RESULTS_DIR,
     ]:
         folder.mkdir(parents=True, exist_ok=True)
@@ -166,6 +194,7 @@ def get_panel_path(panel_name: str) -> Path:
     """Return the panel parquet path for the requested event_v1 setup."""
     mapping = {
         "event_v1_layer1": EVENT_V1_LAYER1_PANEL_PATH,
+        "event_v1_layer1_analyst": EVENT_V1_LAYER1_ANALYST_PANEL_PATH,
         "event_v1_layer1_layer2": EVENT_V1_LAYER1_LAYER2_PANEL_PATH,
         "event_v1_full": EVENT_V1_FULL_PANEL_PATH,
     }
@@ -179,6 +208,7 @@ def get_metrics_output_path(panel_name: str) -> Path:
     """Return the metrics output path for a panel choice."""
     mapping = {
         "event_v1_layer1": EVENT_V1_LAYER1_METRICS_PATH,
+        "event_v1_layer1_analyst": EVENT_V1_LAYER1_ANALYST_JSON_PATH,
         "event_v1_layer1_layer2": EVENT_V1_LAYER1_LAYER2_METRICS_PATH,
         "event_v1_full": EVENT_V1_FULL_METRICS_PATH,
     }
@@ -192,6 +222,7 @@ def get_predictions_output_path(panel_name: str) -> Path:
     """Return the predictions parquet path for a panel choice."""
     mapping = {
         "event_v1_layer1": EVENT_V1_LAYER1_PREDICTIONS_PATH,
+        "event_v1_layer1_analyst": EVENT_V1_LAYER1_ANALYST_PREDICTIONS_PATH,
         "event_v1_layer1_layer2": EVENT_V1_LAYER1_LAYER2_PREDICTIONS_PATH,
         "event_v1_full": EVENT_V1_FULL_PREDICTIONS_PATH,
     }
@@ -205,6 +236,8 @@ def get_candidate_feature_columns(panel_name: str) -> list[str]:
     """Return the candidate feature list for a given event_v1 panel."""
     if panel_name == "event_v1_layer1":
         return list(LAYER1_FEATURE_COLUMNS)
+    if panel_name == "event_v1_layer1_analyst":
+        return list(LAYER1_FEATURE_COLUMNS + ANALYST_EVENT_FEATURE_COLUMNS)
     if panel_name == "event_v1_layer1_layer2":
         return list(LAYER1_FEATURE_COLUMNS + LAYER2_V2_FEATURE_COLUMNS)
     if panel_name == "event_v1_full":
@@ -215,6 +248,20 @@ def get_candidate_feature_columns(panel_name: str) -> list[str]:
             + LAYER3_EVENT_INTERACTION_COLUMNS
         )
     raise ValueError(f"Unsupported event_v1 panel: {panel_name}")
+
+
+def get_markdown_output_path(panel_name: str) -> Path:
+    """Return the Markdown results path for a panel choice."""
+    mapping = {
+        "event_v1_layer1": REPORTS_RESULTS_DIR / "event_v1_layer1.md",
+        "event_v1_layer1_analyst": EVENT_V1_LAYER1_ANALYST_MD_PATH,
+        "event_v1_layer1_layer2": REPORTS_RESULTS_DIR / "event_v1_layer1_layer2.md",
+        "event_v1_full": REPORTS_RESULTS_DIR / "event_v1_full.md",
+    }
+    try:
+        return mapping[panel_name]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported event_v1 panel: {panel_name}") from exc
 
 
 def get_sentiment_input_path(sentiment_source: str) -> Path:

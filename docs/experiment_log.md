@@ -865,3 +865,172 @@ Keep as baseline and compare against Random Forest next.
 
 ### Next Step
 Run Layer 1 Random Forest on same split for apples-to-apples comparison.
+
+---
+
+## Experiment ID
+EXP-007
+
+### Date
+2026-04-10
+
+### Objective
+Test one single additive analyst-event dataset on top of `event_v1_layer1` without changing the existing `event_v1` label, validation, trainer, or evaluation logic.
+
+### Dataset Version
+`analyst_event_v1`
+
+Built from:
+- `data/raw/analyst/analyst_ratings_processed.csv`
+- `data/interim/analyst/layer3_analyst_event_v1.parquet`
+- `data/modeling/event_v1/event_v1_layer1_analyst_panel.parquet`
+
+### Universe
+Same `event_v1` Consumer Staples universe used by the existing Layer 1 event-aware benchmark:
+- `34` tickers
+- `68,524` ticker-date rows after target filtering
+
+### Date Range
+Modeling panel:
+- `2015-07-31` to `2024-12-31`
+
+Preferred analyst source coverage actually available:
+- `2009-02-14` to `2020-06-11`
+
+### Feature Set
+Base features:
+- Existing `event_v1_layer1` fundamentals only
+
+Additive analyst daily features:
+- `analyst_event_count_1d`
+- `analyst_event_count_5d`
+- `analyst_upgrade_count_5d`
+- `analyst_downgrade_count_5d`
+- `analyst_reiterate_count_5d`
+- `analyst_pt_up_count_5d`
+- `analyst_pt_down_count_5d`
+- `analyst_net_revision_score_5d`
+- `analyst_mean_sentiment_1d`
+- `analyst_mean_sentiment_5d`
+- `analyst_sentiment_std_5d`
+- `analyst_days_since_event`
+
+Processed-source schema actually available:
+- ticker / symbol field: `stock`
+- timestamp / date field: `date`
+- action / rating text field: none structured, derived from `title`
+- sentiment / label field: none structured
+- target price fields: none structured
+
+Analyst parsing assumptions:
+- parsed only direct single-name analyst titles from `title`
+- used deterministic mappings for `upgrade`, `downgrade`, `reiterate`, and `initiate`
+- mapped rating text to sentiment using a small transparent `{-1, 0, +1}` scheme
+- derived price-target direction from `raises/lowers/cuts price target` text and `from X to Y` text when present
+- shifted headlines at or after `4:00 PM America/New_York` to the next tradable panel date
+
+### Target
+Unchanged `event_v1` target:
+- `target_event_v1 = 1 if 5-day excess return > 0, else 0`
+
+### Validation
+Unchanged `event_v1` validation policy:
+- purged expanding-window CV on pre-holdout data
+- `5` folds
+- minimum training warmup = `756` trading dates
+- embargo / purge gap = `5` days in config and `9` purged trading dates in realized splits
+- final holdout = calendar year `2024`
+
+### Models
+Unchanged model family:
+- Logistic Regression
+- Random Forest
+- HistGradientBoosting
+
+### Preprocessing
+Unchanged train/eval behavior:
+- median imputation
+- standard scaling only for logistic regression
+- train-fold missingness filter at `20%`
+- train-fold clipping at `1%` / `99%`
+- select best model by mean CV AUC with mean CV log loss tie-break
+- refit on all pre-holdout data and evaluate once on the `2024` holdout
+
+Analyst-layer construction:
+- built daily ticker-date features aligned using only information available on or before date `t`
+- merged only analyst feature columns onto `event_v1_layer1`
+- kept existing `event_v1` artifacts unchanged
+
+### Hyperparameters
+No changes from `train_event_v1.py`.
+
+Best model:
+- `Random Forest`
+  - `n_estimators = 300`
+  - `max_depth = 8`
+  - `min_samples_leaf = 20`
+  - `class_weight = balanced_subsample`
+
+### Results
+Analyst source and feature coverage:
+- Raw processed analyst rows: `1,400,469`
+- Direct event rows kept after deterministic parsing: `143,359`
+- Direct analyst event availability window: `2009-08-10` to `2020-06-11`
+- Daily analyst feature rows: `68,524`
+- Daily rows with same-day analyst events: `1,165`
+
+Best run:
+- Panel: `event_v1_layer1_analyst`
+- Best model: `Random Forest`
+- Mean CV AUC: `0.5046`
+- Mean CV log loss: `0.6952`
+- 2024 holdout AUC: `0.5191`
+- 2024 holdout log loss: `0.6934`
+
+Comparison vs `event_v1_layer1`:
+- `event_v1_layer1` mean CV AUC: `0.5027`
+- `event_v1_layer1_analyst` mean CV AUC: `0.5046`
+- `event_v1_layer1` mean CV log loss: `0.6959`
+- `event_v1_layer1_analyst` mean CV log loss: `0.6952`
+- `event_v1_layer1` 2024 holdout AUC: `0.5205`
+- `event_v1_layer1_analyst` 2024 holdout AUC: `0.5191`
+- `event_v1_layer1` 2024 holdout log loss: `0.6935`
+- `event_v1_layer1_analyst` 2024 holdout log loss: `0.6934`
+
+Explicit win criteria:
+- CV AUC `> 0.5027`: `PASS`
+- CV log loss `< 0.6959`: `PASS`
+- 2024 holdout AUC `>= 0.5205`: `FAIL`
+- 2024 holdout log loss `<= 0.6935`: `PASS`
+
+Overall outcome:
+- `FAIL`
+
+Holdout usable analyst features after the unchanged train-fold missingness filter:
+- `analyst_event_count_1d`
+- `analyst_event_count_5d`
+- `analyst_upgrade_count_5d`
+- `analyst_downgrade_count_5d`
+- `analyst_reiterate_count_5d`
+- `analyst_pt_up_count_5d`
+- `analyst_pt_down_count_5d`
+- `analyst_net_revision_score_5d`
+
+### Observations
+- The additive analyst layer produced a real but small CV improvement on both AUC and log loss.
+- The 2024 holdout AUC still fell below the required benchmark threshold, so this was not a complete win.
+- The processed analyst source is much thinner than expected. It contains only `title`, `date`, and `stock`, so all action, sentiment, and price-target logic had to be derived from title text.
+- The source ends on `2020-06-11`, which means the 2024 holdout has no recent analyst-event counts or sentiment activity from this dataset.
+- The analyst sentiment features were too sparse to survive the unchanged `20%` train-fold missingness rule, and `analyst_days_since_event` was just over the cutoff in the holdout refit.
+
+### Problems
+- No local `raw_analyst_ratings.csv` was available, so the implementation had to rely on the thinner processed CSV only.
+- The processed source coverage stops more than three years before the `2024` holdout.
+- Structured action, sentiment, and target-price columns were absent, so the feature layer could only use transparent headline parsing.
+- `gross_margin` remains fully missing in the inherited Layer 1 base.
+
+### Decision
+Do not promote `event_v1_layer1_analyst` as a winning addition over `event_v1_layer1`. Keep it as an additive experiment only.
+
+### Next Step
+If analyst data remains a priority, recover a richer analyst source with post-2020 coverage and structured action / rating / target-price fields. Otherwise move to a higher-information event dataset with full holdout coverage, such as earnings surprise / estimate revision, 8-K guidance flags, or earnings-call features.
