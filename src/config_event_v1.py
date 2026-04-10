@@ -186,6 +186,7 @@ SENTIMENT_EVENT_V1_OUTPUT_PATH = (
 )
 ANALYST_EVENT_V1_OUTPUT_PATH = INTERIM_DATA_DIR / "analyst" / "layer3_analyst_event_v1.parquet"
 SEC_FILING_EVENTS_V1_OUTPUT_PATH = INTERIM_DATA_DIR / "sec" / "layer3_sec_filing_events_v1.parquet"
+SEC_FILING_METADATA_V1_PATH = INTERIM_DATA_DIR / "sec" / "sec_filing_metadata_v1.parquet"
 SEC_8K_GROUPED_EVENTS_V1_OUTPUT_PATH = (
     INTERIM_DATA_DIR / "sec" / "layer3_sec_8k_grouped_events_v1.parquet"
 )

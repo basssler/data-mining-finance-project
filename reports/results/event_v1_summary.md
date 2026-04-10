@@ -2,7 +2,7 @@
 
 | Run | Best Model | CV AUC | CV Log Loss | Holdout AUC | Holdout Log Loss |
 |---|---|---:|---:|---:|---:|
-| event_v1_layer1 | random_forest | 0.5027 | 0.6959 | 0.5205 | 0.6935 |
+| event_v1_layer1 | hist_gradient_boosting | 0.5056 | 0.6970 | 0.5180 | 0.6955 |
 | event_v1_layer1_layer2 | hist_gradient_boosting | 0.5086 | 0.7196 | 0.5175 | 0.7058 |
 | event_v1_full | hist_gradient_boosting | 0.5087 | 0.7257 | 0.5028 | 0.7104 |
 

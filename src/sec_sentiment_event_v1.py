@@ -18,6 +18,7 @@ from src.config_event_v1 import (
     DEFAULT_SENTIMENT_SOURCE,
     LAYER1_BASE_PANEL_PATH,
     LAYER3_EVENT_FEATURE_COLUMNS,
+    SEC_FILING_METADATA_V1_PATH,
     SENTIMENT_EVENT_V1_OUTPUT_PATH,
     ensure_event_v1_directories,
     get_sentiment_input_path,
@@ -57,7 +58,7 @@ def load_panel_dates(path: Path) -> pd.DataFrame:
 
     df = pd.read_parquet(path, columns=["ticker", "date"])
     df["ticker"] = df["ticker"].astype("string")
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["date"] = pd.to_datetime(df["date"], errors="coerce").astype("datetime64[ns]")
     df = df.dropna(subset=["ticker", "date"]).drop_duplicates().copy()
     df = df.sort_values(["date", "ticker"]).reset_index(drop=True)
     return df
@@ -90,7 +91,9 @@ def normalize_sentiment_data(df: pd.DataFrame, sentiment_source: str) -> pd.Data
 
     prepared = df.copy()
     prepared["ticker"] = prepared["ticker"].astype("string")
-    prepared["filing_date"] = pd.to_datetime(prepared["filing_date"], errors="coerce")
+    prepared["filing_date"] = pd.to_datetime(prepared["filing_date"], errors="coerce").astype(
+        "datetime64[ns]"
+    )
     prepared["sentiment_score"] = pd.to_numeric(prepared[column_map["score"]], errors="coerce")
     prepared["positive_prob"] = pd.to_numeric(prepared[column_map["positive"]], errors="coerce")
     prepared["negative_prob"] = pd.to_numeric(prepared[column_map["negative"]], errors="coerce")
@@ -108,6 +111,93 @@ def normalize_sentiment_data(df: pd.DataFrame, sentiment_source: str) -> pd.Data
             "neutral_prob",
         ]
     ].copy()
+
+
+def load_sec_timing_metadata(path: Path) -> pd.DataFrame | None:
+    """Load SEC timing metadata for filing-level effective-date alignment."""
+    if not path.exists():
+        return None
+
+    metadata = pd.read_parquet(
+        path,
+        columns=["ticker", "accession_number", "effective_model_date"],
+    )
+    metadata["ticker"] = metadata["ticker"].astype("string")
+    metadata["accession_number"] = metadata["accession_number"].astype("string")
+    metadata["effective_model_date"] = pd.to_datetime(
+        metadata["effective_model_date"],
+        errors="coerce",
+    ).astype("datetime64[ns]")
+    metadata = metadata.dropna(
+        subset=["ticker", "accession_number", "effective_model_date"]
+    ).copy()
+    metadata = metadata.sort_values(
+        ["ticker", "accession_number", "effective_model_date"]
+    ).drop_duplicates(subset=["ticker", "accession_number"])
+    return metadata.reset_index(drop=True)
+
+
+def attach_effective_model_dates(
+    sentiment_df: pd.DataFrame,
+    panel_dates_df: pd.DataFrame,
+    timing_metadata_df: pd.DataFrame | None,
+) -> pd.DataFrame:
+    """Attach a tradable effective date to each filing-level sentiment row.
+
+    Matched filings reuse the SEC metadata `effective_model_date`. Unmatched
+    rows fall back to the next tradable date after `filing_date`, which keeps
+    ambiguous timestamps conservative.
+    """
+    featured = sentiment_df.copy()
+
+    if "accession_number" in featured.columns:
+        featured["accession_number"] = featured["accession_number"].astype("string")
+    else:
+        featured["accession_number"] = pd.Series(pd.NA, index=featured.index, dtype="string")
+
+    featured["availability_base_date"] = featured["filing_date"] + pd.Timedelta(days=1)
+    if timing_metadata_df is not None and not timing_metadata_df.empty:
+        featured = featured.merge(
+            timing_metadata_df,
+            on=["ticker", "accession_number"],
+            how="left",
+            validate="many_to_one",
+        )
+        featured["availability_base_date"] = featured["effective_model_date"].fillna(
+            featured["availability_base_date"]
+        )
+    else:
+        featured["effective_model_date"] = pd.NaT
+
+    featured["availability_base_date"] = pd.to_datetime(
+        featured["availability_base_date"],
+        errors="coerce",
+    ).astype("datetime64[ns]")
+
+    panel_dates = panel_dates_df.copy().rename(columns={"date": "panel_date"})
+    panel_dates["panel_date"] = pd.to_datetime(
+        panel_dates["panel_date"],
+        errors="coerce",
+    ).astype("datetime64[ns]")
+    panel_dates = panel_dates.sort_values(["panel_date", "ticker"]).reset_index(drop=True)
+
+    aligned = pd.merge_asof(
+        left=featured.sort_values(["availability_base_date", "ticker"]).reset_index(drop=True),
+        right=panel_dates,
+        left_on="availability_base_date",
+        right_on="panel_date",
+        by="ticker",
+        direction="forward",
+        allow_exact_matches=True,
+    )
+    aligned["effective_model_date"] = pd.to_datetime(aligned["panel_date"], errors="coerce")
+    aligned["effective_model_date"] = aligned["effective_model_date"].astype("datetime64[ns]")
+    aligned = aligned.dropna(subset=["effective_model_date"]).copy()
+    aligned = aligned.drop(columns=["availability_base_date", "panel_date"])
+    aligned = aligned.sort_values(
+        ["ticker", "effective_model_date", "filing_date"]
+    ).reset_index(drop=True)
+    return aligned
 
 
 def build_sec_sentiment_event_v1(
@@ -141,6 +231,11 @@ def build_sec_sentiment_event_v1(
         ["positive_prob", "negative_prob", "neutral_prob"]
     ].max(axis=1)
     featured_filings["sec_event_uncertainty"] = 1.0 - max_probability
+    featured_filings = attach_effective_model_dates(
+        sentiment_df=featured_filings,
+        panel_dates_df=panel_dates_df,
+        timing_metadata_df=load_sec_timing_metadata(SEC_FILING_METADATA_V1_PATH),
+    )
 
     aligned = pd.merge_asof(
         left=panel_dates_df.sort_values(["date", "ticker"]).reset_index(drop=True),
@@ -148,6 +243,7 @@ def build_sec_sentiment_event_v1(
             [
                 ticker_col,
                 filing_date_col,
+                "effective_model_date",
                 "sec_event_score_latest",
                 "sec_event_abs_latest",
                 "sec_event_delta_prev",
@@ -157,10 +253,10 @@ def build_sec_sentiment_event_v1(
                 "sec_event_uncertainty",
             ]
         ]
-        .sort_values([filing_date_col, ticker_col])
+        .sort_values(["effective_model_date", ticker_col])
         .reset_index(drop=True),
         left_on="date",
-        right_on=filing_date_col,
+        right_on="effective_model_date",
         by=ticker_col,
         direction="backward",
         allow_exact_matches=True,

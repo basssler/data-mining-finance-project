@@ -43,6 +43,8 @@ FEATURE_REQUIRED_COLUMNS = [
     "period_end",
 ]
 
+SEC_FILING_METADATA_PATH = INTERIM_DATA_DIR / "sec" / "sec_filing_metadata_v1.parquet"
+
 
 def get_price_input_path() -> Path:
     """Return the daily price/label input path."""
@@ -80,7 +82,7 @@ def prepare_prices(price_df: pd.DataFrame) -> pd.DataFrame:
     """Normalize and sort the daily price/label table."""
     prepared = price_df.copy()
     prepared["ticker"] = prepared["ticker"].astype("string")
-    prepared["date"] = pd.to_datetime(prepared["date"], errors="coerce")
+    prepared["date"] = pd.to_datetime(prepared["date"], errors="coerce").astype("datetime64[ns]")
     prepared = prepared.dropna(subset=["ticker", "date"]).copy()
     prepared = prepared.sort_values(["date", "ticker"]).reset_index(drop=True)
     return prepared
@@ -90,11 +92,100 @@ def prepare_features(feature_df: pd.DataFrame) -> pd.DataFrame:
     """Normalize and sort the fundamentals feature table."""
     prepared = feature_df.copy()
     prepared["ticker"] = prepared["ticker"].astype("string")
+    if "form_type" in prepared.columns:
+        prepared["form_type"] = prepared["form_type"].astype("string")
     prepared["filing_date"] = pd.to_datetime(prepared["filing_date"], errors="coerce")
-    prepared["period_end"] = pd.to_datetime(prepared["period_end"], errors="coerce")
+    prepared["filing_date"] = prepared["filing_date"].astype("datetime64[ns]")
+    prepared["period_end"] = pd.to_datetime(prepared["period_end"], errors="coerce").astype(
+        "datetime64[ns]"
+    )
     prepared = prepared.dropna(subset=["ticker", "filing_date"]).copy()
     prepared = prepared.sort_values(["filing_date", "ticker", "period_end"]).reset_index(drop=True)
     return prepared
+
+
+def load_sec_timing_metadata(path: Path) -> pd.DataFrame | None:
+    """Load SEC timing metadata when it is available for effective-date alignment."""
+    if not path.exists():
+        return None
+
+    metadata = pd.read_parquet(
+        path,
+        columns=["ticker", "form_type", "filing_date", "effective_model_date"],
+    )
+    metadata["ticker"] = metadata["ticker"].astype("string")
+    metadata["form_type"] = metadata["form_type"].astype("string")
+    metadata["filing_date"] = pd.to_datetime(metadata["filing_date"], errors="coerce")
+    metadata["effective_model_date"] = pd.to_datetime(
+        metadata["effective_model_date"],
+        errors="coerce",
+    ).astype("datetime64[ns]")
+    metadata["filing_date"] = metadata["filing_date"].astype("datetime64[ns]")
+    metadata = metadata.dropna(
+        subset=["ticker", "form_type", "filing_date", "effective_model_date"]
+    ).copy()
+    metadata = metadata.sort_values(
+        ["ticker", "form_type", "filing_date", "effective_model_date"]
+    ).drop_duplicates(subset=["ticker", "form_type", "filing_date"])
+    return metadata.reset_index(drop=True)
+
+
+def attach_effective_model_dates(
+    price_df: pd.DataFrame,
+    feature_df: pd.DataFrame,
+    timing_metadata_df: pd.DataFrame | None,
+) -> pd.DataFrame:
+    """Attach the tradable effective date for each fundamentals row.
+
+    When SEC acceptance-time metadata is available, use the precomputed
+    `effective_model_date`. Any unmatched filing falls back to the next
+    tradable date after `filing_date`, which is conservative for missing or
+    ambiguous intraday timestamps.
+    """
+    prepared = feature_df.copy()
+    prepared["availability_base_date"] = prepared["filing_date"] + pd.Timedelta(days=1)
+    prepared["availability_base_date"] = pd.to_datetime(
+        prepared["availability_base_date"],
+        errors="coerce",
+    ).astype("datetime64[ns]")
+
+    if timing_metadata_df is not None and not timing_metadata_df.empty:
+        prepared = prepared.merge(
+            timing_metadata_df,
+            on=["ticker", "form_type", "filing_date"],
+            how="left",
+            validate="many_to_one",
+        )
+        prepared["availability_base_date"] = prepared["effective_model_date"].fillna(
+            prepared["availability_base_date"]
+        )
+    else:
+        prepared["effective_model_date"] = pd.NaT
+
+    panel_dates = price_df[["ticker", "date"]].drop_duplicates().copy()
+    panel_dates = panel_dates.rename(columns={"date": "panel_date"})
+    panel_dates["panel_date"] = pd.to_datetime(panel_dates["panel_date"], errors="coerce").astype(
+        "datetime64[ns]"
+    )
+    panel_dates = panel_dates.sort_values(["panel_date", "ticker"]).reset_index(drop=True)
+
+    aligned = pd.merge_asof(
+        left=prepared.sort_values(["availability_base_date", "ticker"]).reset_index(drop=True),
+        right=panel_dates,
+        left_on="availability_base_date",
+        right_on="panel_date",
+        by="ticker",
+        direction="forward",
+        allow_exact_matches=True,
+    )
+    aligned["effective_model_date"] = pd.to_datetime(aligned["panel_date"], errors="coerce")
+    aligned["effective_model_date"] = aligned["effective_model_date"].astype("datetime64[ns]")
+    aligned = aligned.dropna(subset=["effective_model_date"]).copy()
+    aligned = aligned.drop(columns=["availability_base_date", "panel_date"])
+    aligned = aligned.sort_values(
+        ["effective_model_date", "ticker", "period_end"]
+    ).reset_index(drop=True)
+    return aligned
 
 
 def build_panel(price_df: pd.DataFrame, feature_df: pd.DataFrame) -> pd.DataFrame:
@@ -102,13 +193,18 @@ def build_panel(price_df: pd.DataFrame, feature_df: pd.DataFrame) -> pd.DataFram
 
     `merge_asof` performs the leakage-safe alignment:
     - match on ticker
-    - use the latest fundamentals row with filing_date <= trading date
+    - use the latest fundamentals row with effective_model_date <= trading date
     """
+    feature_df = attach_effective_model_dates(
+        price_df=price_df,
+        feature_df=feature_df,
+        timing_metadata_df=load_sec_timing_metadata(SEC_FILING_METADATA_PATH),
+    )
     panel = pd.merge_asof(
         left=price_df,
         right=feature_df,
         left_on="date",
-        right_on="filing_date",
+        right_on="effective_model_date",
         by="ticker",
         direction="backward",
         allow_exact_matches=True,
