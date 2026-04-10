@@ -40,6 +40,7 @@ from src.config_event_v1 import (
     EVENT_V1_FULL_METRICS_PATH,
     EVENT_V1_LAYER1_LAYER2_METRICS_PATH,
     EVENT_V1_LAYER1_METRICS_PATH,
+    EVENT_V1_LAYER1_SECFILINGS_JSON_PATH,
     EVENT_V1_SUMMARY_PATH,
     PANEL_CHOICES,
     TARGET_COLUMN,
@@ -58,7 +59,7 @@ from src.evaluate_event_v1 import (
 )
 from src.validation_event_v1 import make_event_v1_splits
 
-ANALYST_WIN_CRITERIA = {
+LAYER1_WIN_CRITERIA = {
     "cv_auc_gt": 0.5027,
     "cv_log_loss_lt": 0.6959,
     "holdout_auc_gte": 0.5205,
@@ -442,12 +443,12 @@ def format_metric(value: float | None) -> str:
     return f"{value:.4f}"
 
 
-def load_layer1_baseline_record() -> dict | None:
-    """Load the saved event_v1_layer1 benchmark metrics for comparison."""
-    if not EVENT_V1_LAYER1_METRICS_PATH.exists():
+def load_baseline_record(metrics_path: Path) -> dict | None:
+    """Load a saved event_v1 metrics file into a compact comparison record."""
+    if not metrics_path.exists():
         return None
 
-    payload = json.loads(EVENT_V1_LAYER1_METRICS_PATH.read_text(encoding="utf-8"))
+    payload = json.loads(metrics_path.read_text(encoding="utf-8"))
     best_model = payload["best_model"]
     return {
         "panel_name": payload["panel_name"],
@@ -459,31 +460,36 @@ def load_layer1_baseline_record() -> dict | None:
     }
 
 
-def build_layer1_comparison(best_model_payload: dict) -> dict:
-    """Build the explicit pass/fail comparison against event_v1_layer1."""
+def build_panel_comparison(
+    best_model_payload: dict,
+    baseline_metrics_path: Path,
+    baseline_panel_name: str,
+) -> dict:
+    """Build an explicit comparison against a saved benchmark panel."""
     current_record = {
         "cv_auc": best_model_payload["cv_summary"]["auc_roc_mean"],
         "cv_log_loss": best_model_payload["cv_summary"]["log_loss_mean"],
         "holdout_auc": best_model_payload["holdout"]["holdout_metrics"]["auc_roc"],
         "holdout_log_loss": best_model_payload["holdout"]["holdout_metrics"]["log_loss"],
     }
-    baseline_record = load_layer1_baseline_record()
+    baseline_record = load_baseline_record(baseline_metrics_path)
     pass_fail = {
-        "cv_auc_gt_0_5027": bool(current_record["cv_auc"] > ANALYST_WIN_CRITERIA["cv_auc_gt"]),
+        "cv_auc_gt_0_5027": bool(current_record["cv_auc"] > LAYER1_WIN_CRITERIA["cv_auc_gt"]),
         "cv_log_loss_lt_0_6959": bool(
-            current_record["cv_log_loss"] < ANALYST_WIN_CRITERIA["cv_log_loss_lt"]
+            current_record["cv_log_loss"] < LAYER1_WIN_CRITERIA["cv_log_loss_lt"]
         ),
         "holdout_auc_gte_0_5205": bool(
-            current_record["holdout_auc"] >= ANALYST_WIN_CRITERIA["holdout_auc_gte"]
+            current_record["holdout_auc"] >= LAYER1_WIN_CRITERIA["holdout_auc_gte"]
         ),
         "holdout_log_loss_lte_0_6935": bool(
-            current_record["holdout_log_loss"] <= ANALYST_WIN_CRITERIA["holdout_log_loss_lte"]
+            current_record["holdout_log_loss"] <= LAYER1_WIN_CRITERIA["holdout_log_loss_lte"]
         ),
     }
     return {
-        "baseline_event_v1_layer1": baseline_record,
+        "baseline_panel_name": baseline_panel_name,
+        "baseline_record": baseline_record,
         "current_panel": current_record,
-        "win_criteria": ANALYST_WIN_CRITERIA,
+        "win_criteria": LAYER1_WIN_CRITERIA,
         "pass_fail": pass_fail,
         "all_criteria_passed": all(pass_fail.values()),
     }
@@ -513,14 +519,15 @@ def build_markdown_report(
 
     comparison = metrics_payload.get("comparison_to_event_v1_layer1")
     if comparison is not None:
-        baseline = comparison["baseline_event_v1_layer1"]
+        baseline = comparison["baseline_record"]
         current = comparison["current_panel"]
+        baseline_panel_name = comparison["baseline_panel_name"]
         lines.extend(
             [
                 "",
-                "## Comparison vs event_v1_layer1",
+                f"## Comparison vs {baseline_panel_name}",
                 "",
-                "| Metric | event_v1_layer1 | event_v1_layer1_analyst |",
+                f"| Metric | {baseline_panel_name} | {panel_name} |",
                 "|---|---:|---:|",
                 f"| Mean CV AUC | {format_metric(baseline['cv_auc']) if baseline else 'n/a'} | {format_metric(current['cv_auc'])} |",
                 f"| Mean CV log loss | {format_metric(baseline['cv_log_loss']) if baseline else 'n/a'} | {format_metric(current['cv_log_loss'])} |",
@@ -537,6 +544,25 @@ def build_markdown_report(
                 f"| 2024 holdout log loss <= 0.6935 | {'PASS' if comparison['pass_fail']['holdout_log_loss_lte_0_6935'] else 'FAIL'} |",
                 "",
                 f"- Overall result: {'PASS' if comparison['all_criteria_passed'] else 'FAIL'}",
+            ]
+        )
+
+    secfilings_comparison = metrics_payload.get("comparison_to_event_v1_layer1_secfilings")
+    if secfilings_comparison is not None:
+        baseline = secfilings_comparison["baseline_record"]
+        current = secfilings_comparison["current_panel"]
+        baseline_panel_name = secfilings_comparison["baseline_panel_name"]
+        lines.extend(
+            [
+                "",
+                f"## Comparison vs {baseline_panel_name}",
+                "",
+                f"| Metric | {baseline_panel_name} | {panel_name} |",
+                "|---|---:|---:|",
+                f"| Mean CV AUC | {format_metric(baseline['cv_auc']) if baseline else 'n/a'} | {format_metric(current['cv_auc'])} |",
+                f"| Mean CV log loss | {format_metric(baseline['cv_log_loss']) if baseline else 'n/a'} | {format_metric(current['cv_log_loss'])} |",
+                f"| 2024 holdout AUC | {format_metric(baseline['holdout_auc']) if baseline else 'n/a'} | {format_metric(current['holdout_auc'])} |",
+                f"| 2024 holdout log loss | {format_metric(baseline['holdout_log_loss']) if baseline else 'n/a'} | {format_metric(current['holdout_log_loss'])} |",
             ]
         )
 
@@ -666,9 +692,21 @@ def main() -> None:
         holdout_payload=holdout_payload,
         threshold=args.threshold,
     )
-    if args.panel == "event_v1_layer1_analyst":
-        metrics_payload["comparison_to_event_v1_layer1"] = build_layer1_comparison(
-            metrics_payload["best_model"]
+    if args.panel in {
+        "event_v1_layer1_analyst",
+        "event_v1_layer1_secfilings",
+        "event_v1_layer1_sec8kgrouped",
+    }:
+        metrics_payload["comparison_to_event_v1_layer1"] = build_panel_comparison(
+            metrics_payload["best_model"],
+            baseline_metrics_path=EVENT_V1_LAYER1_METRICS_PATH,
+            baseline_panel_name="event_v1_layer1",
+        )
+    if args.panel == "event_v1_layer1_sec8kgrouped":
+        metrics_payload["comparison_to_event_v1_layer1_secfilings"] = build_panel_comparison(
+            metrics_payload["best_model"],
+            baseline_metrics_path=EVENT_V1_LAYER1_SECFILINGS_JSON_PATH,
+            baseline_panel_name="event_v1_layer1_secfilings",
         )
 
     print(f"Saving metrics to: {metrics_output_path}")

@@ -1034,3 +1034,437 @@ Do not promote `event_v1_layer1_analyst` as a winning addition over `event_v1_la
 
 ### Next Step
 If analyst data remains a priority, recover a richer analyst source with post-2020 coverage and structured action / rating / target-price fields. Otherwise move to a higher-information event dataset with full holdout coverage, such as earnings surprise / estimate revision, 8-K guidance flags, or earnings-call features.
+
+---
+
+## Experiment ID
+EXP-008
+
+### Date
+2026-04-10
+
+### Objective
+Test whether a minimal structured SEC filing-event metadata layer improves over `event_v1_layer1`, using only free SEC EDGAR / `data.sec.gov` metadata and no text parsing.
+
+### Dataset Version
+`sec_filing_events_v1`
+
+Built from:
+- `data/interim/sec/sec_universe_mapping_v1.parquet`
+- `data/interim/sec/sec_filing_metadata_v1.parquet`
+- `data/interim/sec/layer3_sec_filing_events_v1.parquet`
+- `data/modeling/event_v1/event_v1_layer1_secfilings_panel.parquet`
+
+### Universe
+Same `event_v1` Consumer Staples universe used by the existing Layer 1 event-aware benchmark:
+- `34` tickers
+- `68,524` ticker-date rows after target filtering
+
+Universe SEC mapping table columns:
+- `ticker`
+- `cik`
+- `company_name`
+- `sec_lookup_ticker`
+- `mapping_source`
+- `manual_override_note`
+
+Manual overrides used:
+- `BF-B` mapped with SEC lookup ticker `BF.B`
+
+### Date Range
+Modeling panel:
+- `2015-07-31` to `2024-12-31`
+
+Structured SEC filing metadata kept after filtering and effective-date alignment:
+- `2015-07-30` to `2024-12-30`
+
+### Feature Set
+Base features:
+- Existing `event_v1_layer1` fundamentals only
+
+Additive structured SEC filing-event features:
+- `sec_is_8k_today`
+- `sec_is_10q_today`
+- `sec_is_10k_today`
+- `sec_filing_count_1d`
+- `sec_filing_count_5d`
+- `sec_after_close_filing_count_1d`
+- `sec_pre_market_filing_count_1d`
+- `sec_8k_decay_3d`
+- `sec_8k_decay_5d`
+- `sec_10q_decay_3d`
+- `sec_10k_decay_3d`
+- `sec_days_since_any_filing`
+- `sec_days_since_8k`
+- `sec_days_since_10q`
+- `sec_days_since_10k`
+
+SEC metadata assumptions:
+- used SEC submissions metadata only
+- used exact original form types `8-K`, `10-Q`, and `10-K`
+- excluded amendments such as `8-K/A`, `10-Q/A`, and `10-K/A` in v1
+- used `acceptanceDateTime` when available and converted timestamps from UTC to `America/New_York`
+- filings before market open were available same trading day
+- filings during market hours were treated as available same trading day
+- filings after market close were shifted to the next trading day
+- if timestamp had been missing, the rule would have shifted the filing to the next trading day conservatively to avoid leakage
+- no sentiment, no full-text parsing, no MD&A parsing, and no 8-K item parsing
+
+### Target
+Unchanged `event_v1` target:
+- `target_event_v1 = 1 if 5-day excess return > 0, else 0`
+
+### Validation
+Unchanged `event_v1` validation policy:
+- purged expanding-window CV on pre-holdout data
+- `5` folds
+- minimum training warmup = `756` trading dates
+- embargo / purge gap = `5` days in config and `9` purged trading dates in realized splits
+- final holdout = calendar year `2024`
+
+### Models
+Unchanged model family:
+- Logistic Regression
+- Random Forest
+- HistGradientBoosting
+
+### Preprocessing
+Unchanged train/eval behavior:
+- median imputation
+- standard scaling only for logistic regression
+- train-fold missingness filter at `20%`
+- train-fold clipping at `1%` / `99%`
+- select best model by mean CV AUC with mean CV log loss tie-break
+- refit on all pre-holdout data and evaluate once on the `2024` holdout
+
+SEC filing-event construction:
+- fetched universe-level SEC submissions histories from `data.sec.gov`
+- built a structured metadata table with `ticker`, `cik`, `form_type`, `filing_date`, and `filing_timestamp`
+- aligned filings to effective model dates using trading dates from the locked Layer 1 panel
+- merged only SEC filing-event feature columns onto `event_v1_layer1`
+- kept existing `event_v1` artifacts unchanged
+
+### Hyperparameters
+No changes from `train_event_v1.py`.
+
+Best model:
+- `Random Forest`
+  - `n_estimators = 300`
+  - `max_depth = 8`
+  - `min_samples_leaf = 20`
+  - `class_weight = balanced_subsample`
+
+### Results
+SEC mapping and metadata coverage:
+- Universe mapping rows: `34`
+- Manual overrides used: `1`
+- Structured filing metadata rows after filtering/alignment: `4,627`
+- Filings by form type:
+  - `8-K`: `3,518`
+  - `10-Q`: `831`
+  - `10-K`: `278`
+- Timing bucket counts:
+  - `pre_market`: `2,069`
+  - `market_hours`: `1,274`
+  - `after_close`: `1,284`
+
+Daily SEC feature coverage:
+- Daily SEC feature rows: `68,524`
+- Rows with any filing today: `3,980`
+- Rows with `8-K` today: `3,378`
+- Rows with `10-Q` today: `830`
+- Rows with `10-K` today: `278`
+
+Best run:
+- Panel: `event_v1_layer1_secfilings`
+- Best model: `Random Forest`
+- Mean CV AUC: `0.5019`
+- Mean CV log loss: `0.6958`
+- 2024 holdout AUC: `0.5238`
+- 2024 holdout log loss: `0.6933`
+
+Comparison vs `event_v1_layer1`:
+- `event_v1_layer1` mean CV AUC: `0.5027`
+- `event_v1_layer1_secfilings` mean CV AUC: `0.5019`
+- `event_v1_layer1` mean CV log loss: `0.6959`
+- `event_v1_layer1_secfilings` mean CV log loss: `0.6958`
+- `event_v1_layer1` 2024 holdout AUC: `0.5205`
+- `event_v1_layer1_secfilings` 2024 holdout AUC: `0.5238`
+- `event_v1_layer1` 2024 holdout log loss: `0.6935`
+- `event_v1_layer1_secfilings` 2024 holdout log loss: `0.6933`
+
+Explicit win criteria:
+- CV AUC `> 0.5027`: `FAIL`
+- CV log loss `< 0.6959`: `PASS`
+- 2024 holdout AUC `>= 0.5205`: `PASS`
+- 2024 holdout log loss `<= 0.6935`: `PASS`
+
+Overall outcome:
+- `FAIL`
+
+Holdout usable SEC filing-event features after the unchanged train-fold missingness filter:
+- `sec_is_8k_today`
+- `sec_is_10q_today`
+- `sec_is_10k_today`
+- `sec_filing_count_1d`
+- `sec_filing_count_5d`
+- `sec_after_close_filing_count_1d`
+- `sec_pre_market_filing_count_1d`
+- `sec_8k_decay_3d`
+- `sec_8k_decay_5d`
+- `sec_10q_decay_3d`
+- `sec_10k_decay_3d`
+- `sec_days_since_any_filing`
+- `sec_days_since_8k`
+- `sec_days_since_10q`
+- `sec_days_since_10k`
+
+### Observations
+- The structured SEC filing-event layer produced the strongest `2024` holdout result seen so far versus the clean `event_v1_layer1` baseline.
+- Holdout AUC and holdout log loss both improved relative to `event_v1_layer1`.
+- The improvement was not stable enough in CV because mean CV AUC slipped below the required `0.5027` threshold.
+- The feature set remained fully structured and low-complexity: form-type flags, counts, timing buckets, recency, and decay.
+- Timestamp coverage from SEC submissions metadata was strong enough that the conservative missing-time fallback was effectively a safeguard rather than a dominant path.
+
+### Problems
+- The CV ranking metric did not clear the required baseline threshold, so this is not a full benchmark win.
+- Filing-time alignment still depends on SEC acceptance timestamps and a market-hours assumption; this is structured and reasonable, but still an assumption.
+- Amendments were excluded in v1 by design, so any signal specific to amendment timing is intentionally not captured here.
+- `gross_margin` remains fully missing in the inherited Layer 1 base.
+
+### Decision
+Keep `event_v1_layer1_secfilings` as a promising but not winning additive experiment. Do not replace `event_v1_layer1` as the benchmark yet.
+
+### Next Step
+Stay within structured SEC metadata first. Strong next tests are:
+- add amendment-aware counts as a separate SEC metadata experiment
+- split `8-K` timing effects more explicitly without item parsing
+- combine this filing-event layer with one other high-quality additive event dataset only after keeping the current event_v1 evaluation policy fixed
+
+---
+
+## Experiment ID
+EXP-009
+
+### Date
+2026-04-10
+
+### Objective
+Test whether grouped `8-K` item-category features improve over `event_v1_layer1` and over the coarse SEC form-type event layer from EXP-008, while staying strictly inside structured SEC metadata only.
+
+### Dataset Version
+`sec_8k_grouped_events_v1`
+
+Built from:
+- reused `data/interim/sec/sec_universe_mapping_v1.parquet`
+- reused `data/interim/sec/sec_filing_metadata_v1.parquet`
+- refetched structured `8-K` `items` metadata from SEC `data.sec.gov` submissions JSON for the project universe only
+- wrote `data/interim/sec/layer3_sec_8k_grouped_events_v1.parquet`
+- wrote `data/modeling/event_v1/event_v1_layer1_sec8kgrouped_panel.parquet`
+
+### Universe
+Same `event_v1` Consumer Staples universe used by the locked Layer 1 benchmark:
+- `34` tickers
+- `68,524` ticker-date rows after target filtering
+
+### Date Range
+Modeling panel:
+- `2015-07-31` to `2024-12-31`
+
+Structured retained `8-K` item rows after reuse of EXP-008 timing-aligned metadata:
+- `2015-07-30` to `2024-12-30`
+
+### Feature Set
+Base features:
+- existing `event_v1_layer1` fundamentals only
+
+Additive grouped `8-K` features:
+- `sec_8k_earnings_results_today`
+- `sec_8k_guidance_outlook_today`
+- `sec_8k_leadership_governance_today`
+- `sec_8k_financing_securities_today`
+- `sec_8k_material_agreement_mna_today`
+- `sec_8k_regulatory_legal_today`
+- `sec_8k_earnings_results_decay_3d`
+- `sec_8k_guidance_outlook_decay_3d`
+- `sec_8k_leadership_governance_decay_3d`
+- `sec_8k_financing_securities_decay_3d`
+- `sec_8k_material_agreement_mna_decay_3d`
+- `sec_8k_regulatory_legal_decay_3d`
+- `sec_8k_item_count_1d`
+- `sec_8k_item_count_5d`
+- `sec_days_since_8k_earnings_results`
+- `sec_days_since_8k_guidance_outlook`
+- `sec_days_since_8k_leadership_governance`
+
+Explicit item-to-category mapping used in code:
+- `earnings_results`: `2.02`
+- `guidance_outlook`: `7.01`
+- `leadership_governance`: `5.02`, `5.03`, `5.07`
+- `financing_securities`: `2.03`, `3.02`, `3.03`
+- `material_agreement_mna`: `1.01`, `1.02`, `2.01`
+- `regulatory_legal`: `1.03`, `4.01`, `4.02`
+
+Explicitly skipped as too broad or ambiguous for v1:
+- broad catch-all items such as `8.01` and `9.01`
+- section-level integer item codes such as `1`, `2`, `4`, `5`, `7`, `8`, `9`, and `12`
+- clean but out-of-scope items such as `2.05`, `2.06`, `5.01`, `5.04`, and `5.05`
+
+Important assumptions:
+- `7.01` was treated as a structured proxy for guidance / outlook style public disclosures because no text disambiguation was allowed in this experiment
+- no full-text parsing, no sentiment, no MD&A extraction, and no exhibit parsing were used
+- only exact original `8-K` filings were used for grouped-item features; amendments stayed excluded
+
+### Target
+Unchanged `event_v1` target:
+- `target_event_v1 = 1 if 5-day excess return > 0, else 0`
+
+### Validation
+Unchanged `event_v1` validation policy:
+- purged expanding-window CV on pre-holdout data
+- `5` folds
+- minimum training warmup = `756` trading dates
+- embargo / purge gap = `5` days in config and `9` purged trading dates in realized splits
+- final holdout = calendar year `2024`
+
+### Models
+Unchanged model family:
+- Logistic Regression
+- Random Forest
+- HistGradientBoosting
+
+### Preprocessing
+Unchanged train/eval behavior:
+- median imputation
+- standard scaling only for logistic regression
+- train-fold missingness filter at `20%`
+- train-fold clipping at `1%` / `99%`
+- select best model by mean CV AUC with mean CV log loss tie-break
+- refit on all pre-holdout data and evaluate once on the `2024` holdout
+
+Grouped `8-K` construction details:
+- reused EXP-008 universe mapping and timing-aligned SEC metadata
+- pulled `8-K` `items` arrays from SEC submissions JSON for the project universe only
+- reused EXP-008 timing convention:
+  - SEC UTC acceptance timestamps converted to `America/New_York`
+  - filings after market close shifted to the next trading day
+  - filings before market open available same trading day
+  - if timestamp was missing in EXP-008 metadata, the filing had already been shifted conservatively to the next trading day
+- merged only grouped `8-K` feature columns onto `event_v1_layer1`
+- kept labels, validation, model selection logic, preprocessing, and holdout policy unchanged
+
+### Hyperparameters
+No changes from `train_event_v1.py`.
+
+Best model:
+- `HistGradientBoosting`
+  - `max_depth = 6`
+  - `learning_rate = 0.05`
+  - `max_iter = 300`
+  - `min_samples_leaf = 50`
+
+### Results
+Structured `8-K` item coverage:
+- raw exact `8-K` submission rows fetched: `10,708`
+- `8-K` filing rows with at least one parseable decimal item code: `9,457`
+- retained structured item rows after reuse of EXP-008 timing-aligned metadata: `7,420`
+- mapped category item rows retained: `3,651`
+
+Mapped item frequencies retained in-window:
+- `2.02`: `1,103`
+- `7.01`: `821`
+- `5.02`: `738`
+- `5.07`: `280`
+- `1.01`: `289`
+- `2.03`: `196`
+- `5.03`: `123`
+- `1.02`: `64`
+- `2.01`: `23`
+- `3.02`: `2`
+- `3.03`: `5`
+- `4.01`: `3`
+- `4.02`: `4`
+
+Daily grouped-feature event frequencies:
+- `sec_8k_earnings_results_today`: `1,102`
+- `sec_8k_guidance_outlook_today`: `804`
+- `sec_8k_leadership_governance_today`: `1,027`
+- `sec_8k_financing_securities_today`: `201`
+- `sec_8k_material_agreement_mna_today`: `317`
+- `sec_8k_regulatory_legal_today`: `7`
+
+Best run:
+- Panel: `event_v1_layer1_sec8kgrouped`
+- Best model: `HistGradientBoosting`
+- Mean CV AUC: `0.5079`
+- Mean CV log loss: `0.7188`
+- 2024 holdout AUC: `0.5209`
+- 2024 holdout log loss: `0.7044`
+
+Comparison vs `event_v1_layer1`:
+- `event_v1_layer1` mean CV AUC: `0.5027`
+- `event_v1_layer1_sec8kgrouped` mean CV AUC: `0.5079`
+- `event_v1_layer1` mean CV log loss: `0.6959`
+- `event_v1_layer1_sec8kgrouped` mean CV log loss: `0.7188`
+- `event_v1_layer1` 2024 holdout AUC: `0.5205`
+- `event_v1_layer1_sec8kgrouped` 2024 holdout AUC: `0.5209`
+- `event_v1_layer1` 2024 holdout log loss: `0.6935`
+- `event_v1_layer1_sec8kgrouped` 2024 holdout log loss: `0.7044`
+
+Comparison vs `event_v1_layer1_secfilings`:
+- `event_v1_layer1_secfilings` mean CV AUC: `0.5019`
+- `event_v1_layer1_sec8kgrouped` mean CV AUC: `0.5079`
+- `event_v1_layer1_secfilings` mean CV log loss: `0.6958`
+- `event_v1_layer1_sec8kgrouped` mean CV log loss: `0.7188`
+- `event_v1_layer1_secfilings` 2024 holdout AUC: `0.5238`
+- `event_v1_layer1_sec8kgrouped` 2024 holdout AUC: `0.5209`
+- `event_v1_layer1_secfilings` 2024 holdout log loss: `0.6933`
+- `event_v1_layer1_sec8kgrouped` 2024 holdout log loss: `0.7044`
+
+Explicit win criteria:
+- CV AUC `> 0.5027`: `PASS`
+- CV log loss `< 0.6959`: `FAIL`
+- 2024 holdout AUC `>= 0.5205`: `PASS`
+- 2024 holdout log loss `<= 0.6935`: `FAIL`
+
+Overall outcome:
+- `FAIL`
+
+Holdout usable grouped `8-K` features after the unchanged train-fold missingness filter:
+- `sec_8k_earnings_results_today`
+- `sec_8k_guidance_outlook_today`
+- `sec_8k_leadership_governance_today`
+- `sec_8k_financing_securities_today`
+- `sec_8k_material_agreement_mna_today`
+- `sec_8k_regulatory_legal_today`
+- `sec_8k_earnings_results_decay_3d`
+- `sec_8k_guidance_outlook_decay_3d`
+- `sec_8k_leadership_governance_decay_3d`
+- `sec_8k_item_count_1d`
+- `sec_8k_item_count_5d`
+- `sec_days_since_8k_earnings_results`
+- `sec_days_since_8k_guidance_outlook`
+- `sec_days_since_8k_leadership_governance`
+
+### Observations
+- Grouping `8-K` items materially improved mean CV AUC over both `event_v1_layer1` and the coarser EXP-008 SEC layer.
+- The same grouped refinement damaged probability calibration badly enough that both CV log loss and holdout log loss failed the locked thresholds.
+- The locked selection rule chose `HistGradientBoosting` because it won on mean CV AUC, even though the resulting probabilities were much worse calibrated than the best EXP-008 run.
+- The grouped layer did not beat the coarser SEC filing-event layer on holdout AUC or holdout log loss.
+- The most active grouped signals were earnings results, leadership / governance, and the coarse `7.01` guidance proxy. Financing and regulatory/legal coverage were thin.
+
+### Problems
+- `guidance_outlook` depends on `7.01`, which is a structured but noisy proxy for outlook-related public disclosures because v1 intentionally avoids any text disambiguation.
+- Broad but common items such as `8.01` and `9.01` were skipped by design, which keeps the mapping auditable but leaves a large share of raw `8-K` activity unused.
+- `regulatory_legal` coverage is extremely sparse, and its decay feature was far too missing to survive the unchanged `20%` train-fold filter.
+- The grouped refinement improved rank ordering but produced much worse log loss than both the Layer 1 baseline and the EXP-008 SEC coarse layer.
+- `gross_margin` remains fully missing in the inherited Layer 1 base.
+
+### Decision
+Do not promote `event_v1_layer1_sec8kgrouped` over either `event_v1_layer1` or `event_v1_layer1_secfilings`. Keep it as a controlled SEC-path refinement only.
+
+### Next Step
+If the SEC path stays active, keep it structured and simpler:
+- test a narrower grouped layer built only from the strongest clean categories such as `2.02` earnings results and `5.02` / `5.07` governance events
+- test a hybrid SEC metadata panel that keeps the EXP-008 coarse filing timing/count features and adds only the strongest grouped `8-K` flags
+- do not expand into text NLP until the structured SEC metadata path is exhausted

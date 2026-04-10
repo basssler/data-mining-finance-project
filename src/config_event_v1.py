@@ -20,6 +20,8 @@ DEFAULT_PANEL_NAME = "event_v1_layer1"
 PANEL_CHOICES = [
     "event_v1_layer1",
     "event_v1_layer1_analyst",
+    "event_v1_layer1_secfilings",
+    "event_v1_layer1_sec8kgrouped",
     "event_v1_layer1_layer2",
     "event_v1_full",
 ]
@@ -133,6 +135,44 @@ ANALYST_EVENT_FEATURE_COLUMNS = [
     "analyst_days_since_event",
 ]
 
+SEC_FILING_EVENT_FEATURE_COLUMNS = [
+    "sec_is_8k_today",
+    "sec_is_10q_today",
+    "sec_is_10k_today",
+    "sec_filing_count_1d",
+    "sec_filing_count_5d",
+    "sec_after_close_filing_count_1d",
+    "sec_pre_market_filing_count_1d",
+    "sec_8k_decay_3d",
+    "sec_8k_decay_5d",
+    "sec_10q_decay_3d",
+    "sec_10k_decay_3d",
+    "sec_days_since_any_filing",
+    "sec_days_since_8k",
+    "sec_days_since_10q",
+    "sec_days_since_10k",
+]
+
+SEC_8K_GROUPED_EVENT_FEATURE_COLUMNS = [
+    "sec_8k_earnings_results_today",
+    "sec_8k_guidance_outlook_today",
+    "sec_8k_leadership_governance_today",
+    "sec_8k_financing_securities_today",
+    "sec_8k_material_agreement_mna_today",
+    "sec_8k_regulatory_legal_today",
+    "sec_8k_earnings_results_decay_3d",
+    "sec_8k_guidance_outlook_decay_3d",
+    "sec_8k_leadership_governance_decay_3d",
+    "sec_8k_financing_securities_decay_3d",
+    "sec_8k_material_agreement_mna_decay_3d",
+    "sec_8k_regulatory_legal_decay_3d",
+    "sec_8k_item_count_1d",
+    "sec_8k_item_count_5d",
+    "sec_days_since_8k_earnings_results",
+    "sec_days_since_8k_guidance_outlook",
+    "sec_days_since_8k_leadership_governance",
+]
+
 PRICE_INPUT_PATH = INTERIM_DATA_DIR / "prices" / "prices_with_labels.parquet"
 LAYER1_BASE_PANEL_PATH = PROCESSED_DATA_DIR / "modeling" / "layer1_modeling_panel.parquet"
 FULL_SENTIMENT_INPUT_PATH = INTERIM_DATA_DIR / "features" / "layer3_sec_sentiment_features.parquet"
@@ -145,10 +185,20 @@ SENTIMENT_EVENT_V1_OUTPUT_PATH = (
     INTERIM_DATA_DIR / "features" / "layer3_sec_sentiment_event_v1.parquet"
 )
 ANALYST_EVENT_V1_OUTPUT_PATH = INTERIM_DATA_DIR / "analyst" / "layer3_analyst_event_v1.parquet"
+SEC_FILING_EVENTS_V1_OUTPUT_PATH = INTERIM_DATA_DIR / "sec" / "layer3_sec_filing_events_v1.parquet"
+SEC_8K_GROUPED_EVENTS_V1_OUTPUT_PATH = (
+    INTERIM_DATA_DIR / "sec" / "layer3_sec_8k_grouped_events_v1.parquet"
+)
 
 EVENT_V1_LAYER1_PANEL_PATH = PROCESSED_DATA_DIR / "modeling" / "event_v1_layer1_panel.parquet"
 EVENT_V1_LAYER1_ANALYST_PANEL_PATH = (
     DATA_DIR / "modeling" / "event_v1" / "event_v1_layer1_analyst_panel.parquet"
+)
+EVENT_V1_LAYER1_SECFILINGS_PANEL_PATH = (
+    DATA_DIR / "modeling" / "event_v1" / "event_v1_layer1_secfilings_panel.parquet"
+)
+EVENT_V1_LAYER1_SEC8KGROUPED_PANEL_PATH = (
+    DATA_DIR / "modeling" / "event_v1" / "event_v1_layer1_sec8kgrouped_panel.parquet"
 )
 EVENT_V1_LAYER1_LAYER2_PANEL_PATH = (
     PROCESSED_DATA_DIR / "modeling" / "event_v1_layer1_layer2_panel.parquet"
@@ -160,6 +210,12 @@ REPORTS_RESULTS_DIR = REPORTS_DIR / "results"
 EVENT_V1_LAYER1_METRICS_PATH = REPORTS_RESULTS_DIR / "event_v1_layer1_metrics.json"
 EVENT_V1_LAYER1_ANALYST_JSON_PATH = REPORTS_RESULTS_DIR / "event_v1_layer1_analyst.json"
 EVENT_V1_LAYER1_ANALYST_MD_PATH = REPORTS_RESULTS_DIR / "event_v1_layer1_analyst.md"
+EVENT_V1_LAYER1_SECFILINGS_JSON_PATH = REPORTS_RESULTS_DIR / "event_v1_layer1_secfilings.json"
+EVENT_V1_LAYER1_SECFILINGS_MD_PATH = REPORTS_RESULTS_DIR / "event_v1_layer1_secfilings.md"
+EVENT_V1_LAYER1_SEC8KGROUPED_JSON_PATH = (
+    REPORTS_RESULTS_DIR / "event_v1_layer1_sec8kgrouped.json"
+)
+EVENT_V1_LAYER1_SEC8KGROUPED_MD_PATH = REPORTS_RESULTS_DIR / "event_v1_layer1_sec8kgrouped.md"
 EVENT_V1_LAYER1_LAYER2_METRICS_PATH = (
     REPORTS_RESULTS_DIR / "event_v1_layer1_layer2_metrics.json"
 )
@@ -168,6 +224,12 @@ EVENT_V1_FULL_METRICS_PATH = REPORTS_RESULTS_DIR / "event_v1_full_metrics.json"
 EVENT_V1_LAYER1_PREDICTIONS_PATH = REPORTS_RESULTS_DIR / "event_v1_layer1_predictions.parquet"
 EVENT_V1_LAYER1_ANALYST_PREDICTIONS_PATH = (
     REPORTS_RESULTS_DIR / "event_v1_layer1_analyst_predictions.parquet"
+)
+EVENT_V1_LAYER1_SECFILINGS_PREDICTIONS_PATH = (
+    REPORTS_RESULTS_DIR / "event_v1_layer1_secfilings_predictions.parquet"
+)
+EVENT_V1_LAYER1_SEC8KGROUPED_PREDICTIONS_PATH = (
+    REPORTS_RESULTS_DIR / "event_v1_layer1_sec8kgrouped_predictions.parquet"
 )
 EVENT_V1_LAYER1_LAYER2_PREDICTIONS_PATH = (
     REPORTS_RESULTS_DIR / "event_v1_layer1_layer2_predictions.parquet"
@@ -183,8 +245,12 @@ def ensure_event_v1_directories() -> None:
         MARKET_FEATURE_V2_OUTPUT_PATH.parent,
         SENTIMENT_EVENT_V1_OUTPUT_PATH.parent,
         ANALYST_EVENT_V1_OUTPUT_PATH.parent,
+        SEC_FILING_EVENTS_V1_OUTPUT_PATH.parent,
+        SEC_8K_GROUPED_EVENTS_V1_OUTPUT_PATH.parent,
         EVENT_V1_LAYER1_PANEL_PATH.parent,
         EVENT_V1_LAYER1_ANALYST_PANEL_PATH.parent,
+        EVENT_V1_LAYER1_SECFILINGS_PANEL_PATH.parent,
+        EVENT_V1_LAYER1_SEC8KGROUPED_PANEL_PATH.parent,
         REPORTS_RESULTS_DIR,
     ]:
         folder.mkdir(parents=True, exist_ok=True)
@@ -195,6 +261,8 @@ def get_panel_path(panel_name: str) -> Path:
     mapping = {
         "event_v1_layer1": EVENT_V1_LAYER1_PANEL_PATH,
         "event_v1_layer1_analyst": EVENT_V1_LAYER1_ANALYST_PANEL_PATH,
+        "event_v1_layer1_secfilings": EVENT_V1_LAYER1_SECFILINGS_PANEL_PATH,
+        "event_v1_layer1_sec8kgrouped": EVENT_V1_LAYER1_SEC8KGROUPED_PANEL_PATH,
         "event_v1_layer1_layer2": EVENT_V1_LAYER1_LAYER2_PANEL_PATH,
         "event_v1_full": EVENT_V1_FULL_PANEL_PATH,
     }
@@ -209,6 +277,8 @@ def get_metrics_output_path(panel_name: str) -> Path:
     mapping = {
         "event_v1_layer1": EVENT_V1_LAYER1_METRICS_PATH,
         "event_v1_layer1_analyst": EVENT_V1_LAYER1_ANALYST_JSON_PATH,
+        "event_v1_layer1_secfilings": EVENT_V1_LAYER1_SECFILINGS_JSON_PATH,
+        "event_v1_layer1_sec8kgrouped": EVENT_V1_LAYER1_SEC8KGROUPED_JSON_PATH,
         "event_v1_layer1_layer2": EVENT_V1_LAYER1_LAYER2_METRICS_PATH,
         "event_v1_full": EVENT_V1_FULL_METRICS_PATH,
     }
@@ -223,6 +293,8 @@ def get_predictions_output_path(panel_name: str) -> Path:
     mapping = {
         "event_v1_layer1": EVENT_V1_LAYER1_PREDICTIONS_PATH,
         "event_v1_layer1_analyst": EVENT_V1_LAYER1_ANALYST_PREDICTIONS_PATH,
+        "event_v1_layer1_secfilings": EVENT_V1_LAYER1_SECFILINGS_PREDICTIONS_PATH,
+        "event_v1_layer1_sec8kgrouped": EVENT_V1_LAYER1_SEC8KGROUPED_PREDICTIONS_PATH,
         "event_v1_layer1_layer2": EVENT_V1_LAYER1_LAYER2_PREDICTIONS_PATH,
         "event_v1_full": EVENT_V1_FULL_PREDICTIONS_PATH,
     }
@@ -238,6 +310,10 @@ def get_candidate_feature_columns(panel_name: str) -> list[str]:
         return list(LAYER1_FEATURE_COLUMNS)
     if panel_name == "event_v1_layer1_analyst":
         return list(LAYER1_FEATURE_COLUMNS + ANALYST_EVENT_FEATURE_COLUMNS)
+    if panel_name == "event_v1_layer1_secfilings":
+        return list(LAYER1_FEATURE_COLUMNS + SEC_FILING_EVENT_FEATURE_COLUMNS)
+    if panel_name == "event_v1_layer1_sec8kgrouped":
+        return list(LAYER1_FEATURE_COLUMNS + SEC_8K_GROUPED_EVENT_FEATURE_COLUMNS)
     if panel_name == "event_v1_layer1_layer2":
         return list(LAYER1_FEATURE_COLUMNS + LAYER2_V2_FEATURE_COLUMNS)
     if panel_name == "event_v1_full":
@@ -255,6 +331,8 @@ def get_markdown_output_path(panel_name: str) -> Path:
     mapping = {
         "event_v1_layer1": REPORTS_RESULTS_DIR / "event_v1_layer1.md",
         "event_v1_layer1_analyst": EVENT_V1_LAYER1_ANALYST_MD_PATH,
+        "event_v1_layer1_secfilings": EVENT_V1_LAYER1_SECFILINGS_MD_PATH,
+        "event_v1_layer1_sec8kgrouped": EVENT_V1_LAYER1_SEC8KGROUPED_MD_PATH,
         "event_v1_layer1_layer2": REPORTS_RESULTS_DIR / "event_v1_layer1_layer2.md",
         "event_v1_full": REPORTS_RESULTS_DIR / "event_v1_full.md",
     }
