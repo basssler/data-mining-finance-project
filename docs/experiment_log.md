@@ -1620,3 +1620,113 @@ Do not promote the expanded universe as the new default research universe. Keep 
 
 ### Next Step
 If universe expansion is revisited later, keep the same locked Phase 4 method stack and test whether broader scale only makes sense after stronger features or additional external datasets justify it.
+
+---
+
+## Experiment ID
+EXP-011
+
+### Date
+2026-04-11
+
+### Objective
+Implement Phase 6B on top of the locked `event_panel_v2` 34-ticker anchor using exactly one new external dataset family:
+- Alpha Vantage `EARNINGS_ESTIMATES`
+- Alpha Vantage `EARNINGS`
+
+Keep the locked setup unchanged otherwise:
+- one row = one ticker-event
+- `5`-trading-day excess-return-sign label
+- untouched `2024` holdout
+- logistic regression, random forest, and XGBoost only
+
+### Dataset Version
+Phase 6B Alpha Vantage artifacts:
+- `data/interim/alpha_vantage/alpha_vantage_manifest.json`
+- `data/interim/alpha_vantage/alpha_vantage_earnings_estimates.parquet`
+- `data/interim/alpha_vantage/alpha_vantage_earnings.parquet`
+- `data/interim/features/alpha_vantage_earnings_features_phase6b.parquet`
+- `data/interim/features/alpha_vantage_earnings_features_phase6b.diagnostics.json`
+- `data/interim/event_panel_v2_phase6b_alpha_vantage.parquet`
+- `configs/event_panel_v2_phase6b_alpha_vantage.yaml`
+- `reports/results/event_panel_v2_phase6b_alpha_vantage_benchmark.csv`
+- `reports/results/event_panel_v2_phase6b_alpha_vantage_benchmark.md`
+- `docs/phase6b_alpha_vantage_earnings_v1.md`
+
+### API Design
+Cache-first and resumable ingest:
+- per-symbol, per-endpoint raw cache under `data/raw/alpha_vantage/`
+- manifest rows track `ticker`, `endpoint`, `status`, `fetched_at`, `cache_path`, and `error_message`
+- API keys are read from `ALPHAVANTAGE_API_KEYS`
+- multiple keys are rotated round-robin and masked in local usage summaries
+- backfill mode skips already completed symbol-endpoint pairs
+
+### Leakage Controls
+- Alpha Vantage earnings outcomes are only joined when `reportedDate + reportTime` is strictly earlier than the filing-event cutoff.
+- Filing rows with missing intraday timestamps use previous-trading-day close as the conservative cutoff.
+- `EARNINGS_ESTIMATES` rows are normalized in full, but only quarterly estimate rows linked to already reported quarters are promoted into model features.
+- Future untimestamped estimate snapshots are explicitly not used.
+
+### Feature Set
+Attempted Phase 6B additive features:
+- latest prior EPS surprise and EPS surprise percent
+- trailing `4`-quarter EPS surprise mean/std and EPS surprise-percent mean/std
+- trailing `4`-quarter EPS beat rate
+- days since last earnings release
+- latest prior-quarter EPS / revenue estimate
+- EPS / revenue analyst counts
+- EPS estimate revision versus `30` / `90` days ago
+
+Not promoted due source limitations:
+- annual estimate features without clean release timing
+- revenue revision features
+- revenue surprise features
+
+### Coverage
+Current manifest state after the first API-budget-constrained pass:
+- `68` manifest rows total
+- `22` complete
+- `46` pending
+
+Current merged-panel diagnostic coverage:
+- matched rows with any Alpha Vantage coverage: `302` of `1,109`
+- unmatched rows: `807`
+- estimate-derived features are roughly `75.65%` missing
+- earnings-outcome features are roughly `72.77%` to `72.95%` missing
+
+### Results
+Benchmark outcome on the current partial-cache build:
+- Logistic Regression:
+  - Mean CV AUC: `0.5181`
+  - 2024 holdout AUC: `0.5051`
+- Random Forest:
+  - Mean CV AUC: `0.5260`
+  - 2024 holdout AUC: `0.5237`
+- XGBoost:
+  - Mean CV AUC: `0.5244`
+  - 2024 holdout AUC: `0.5290`
+
+Selected primary model:
+- `random_forest`
+
+Comparison versus the locked Phase 4 anchor:
+- identical benchmark metrics across all three models
+
+### Observations
+- The Phase 6B code path now exists end to end: ingest, normalization, leakage-safe merge, additive config, training, report, and decision memo.
+- The live Alpha Vantage backfill did not finish because all provided keys started returning immediate throttle payloads before the remaining `46` manifest rows could be fetched.
+- Under the current partial coverage, every Alpha Vantage feature was dropped by the existing train-fold missingness filter, so the benchmark remained identical to baseline.
+- This means the current result is diagnostic and provisional, not the final official Phase 6B verdict.
+
+### Problems
+- The initial key-rotation client reused free-tier keys too quickly; this was corrected by adding conservative per-key reuse spacing.
+- Alpha Vantage still throttled all available keys before the full `34`-ticker backfill could complete.
+- Because the backfill is incomplete, the current benchmark cannot yet answer the Phase 6B question cleanly enough for promotion.
+
+### Decision
+Current status: `FREEZE` pending a complete backfill.
+
+Do not promote Alpha Vantage earnings features based on the present partial-cache result. Keep the Phase 4 anchor as primary until fresh or replacement keys finish the remaining pending manifest rows.
+
+### Next Step
+Resume the existing Phase 6B builder with refreshed Alpha Vantage key capacity and complete the remaining `46` pending symbol-endpoint pairs before treating the benchmark as official.

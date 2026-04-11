@@ -66,6 +66,13 @@ def load_config(path: Path) -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
+def resolve_candidate_features(panel_df: pd.DataFrame, config: dict) -> list[str]:
+    base_candidates = candidate_feature_columns(panel_df)
+    additional = list(config.get("feature_inclusions", {}).get("additional", []))
+    combined = list(dict.fromkeys(base_candidates + [column for column in additional if column in panel_df.columns]))
+    return combined
+
+
 def set_random_seeds(seed_block: dict) -> None:
     random.seed(int(seed_block.get("python", 42)))
     np.random.seed(int(seed_block.get("numpy", 42)))
@@ -322,7 +329,7 @@ def main() -> None:
         panel_df=labeled_panel_df,
         variant=variant,
         model_names=list(config["models"]),
-        candidate_features=candidate_feature_columns(labeled_panel_df),
+        candidate_features=resolve_candidate_features(labeled_panel_df, config),
         explicit_exclusions=list(config["feature_exclusions"]["explicit"]),
         holdout_start=str(config["holdout"]["start"]),
         n_splits=int(config["cv"]["n_splits"]),
