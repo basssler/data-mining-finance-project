@@ -115,6 +115,11 @@ EXACT_EVENT_METADATA_COLUMNS = [
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments for the event_panel_v2 build."""
     parser = argparse.ArgumentParser(description="Build the event_panel_v2 research panel.")
+    parser.add_argument("--price-path", default=str(PRICE_INPUT_PATH))
+    parser.add_argument("--event-source-path", default=str(SEC_FILING_METADATA_PATH))
+    parser.add_argument("--fundamentals-path", default=str(FUNDAMENTALS_INPUT_PATH))
+    parser.add_argument("--market-path", default=str(MARKET_INPUT_PATH))
+    parser.add_argument("--sentiment-path", default=str(FULL_SENTIMENT_INPUT_PATH))
     parser.add_argument("--output-path", default=str(EVENT_PANEL_V2_OUTPUT_PATH))
     parser.add_argument("--spec-path", default=str(EVENT_PANEL_V2_SPEC_PATH))
     return parser.parse_args()
@@ -451,7 +456,10 @@ def finalize_column_order(panel_df: pd.DataFrame) -> pd.DataFrame:
     return panel_df[ordered].copy()
 
 
-def validate_panel_structure(panel_df: pd.DataFrame) -> None:
+def validate_panel_structure(
+    panel_df: pd.DataFrame,
+    trading_dates_df: pd.DataFrame | None = None,
+) -> None:
     """Run structural checks that should hold for the event-based design."""
     if panel_df.empty:
         raise ValueError("event_panel_v2 is empty.")
@@ -490,11 +498,36 @@ def validate_panel_structure(panel_df: pd.DataFrame) -> None:
     if after_close_same_day.any():
         raise ValueError("After-close events were not shifted beyond the raw event_date.")
 
-    same_day_timing_invalid = (
+    same_day_candidate_mask = (
         panel_df["timing_bucket"].isin(["pre_market", "market_hours"])
         & local_timestamp_date.notna()
-        & (panel_df["effective_model_date"] != local_timestamp_date)
     )
+    same_day_timing_invalid = same_day_candidate_mask & (
+        panel_df["effective_model_date"] != local_timestamp_date
+    )
+    if same_day_timing_invalid.any() and trading_dates_df is not None:
+        trading_dates = trading_dates_df[["ticker", "date"]].drop_duplicates().copy()
+        trading_dates["ticker"] = trading_dates["ticker"].astype("string")
+        trading_dates["date"] = pd.to_datetime(trading_dates["date"], errors="coerce").astype(
+            "datetime64[ns]"
+        )
+        same_day_lookup = pd.DataFrame(
+            {
+                "ticker": panel_df.loc[same_day_timing_invalid, "ticker"].astype("string"),
+                "timestamp_trading_date": local_timestamp_date.loc[same_day_timing_invalid],
+            }
+        )
+        same_day_lookup = same_day_lookup.merge(
+            trading_dates.rename(columns={"date": "timestamp_trading_date"}),
+            on=["ticker", "timestamp_trading_date"],
+            how="left",
+            indicator=True,
+        )
+        has_same_day_session = same_day_lookup["_merge"].eq("both").to_numpy()
+        same_day_invalid_index = panel_df.index[same_day_timing_invalid]
+        allowed_non_trading_day_rows = pd.Series(False, index=panel_df.index)
+        allowed_non_trading_day_rows.loc[same_day_invalid_index] = ~has_same_day_session
+        same_day_timing_invalid = same_day_timing_invalid & ~allowed_non_trading_day_rows
     if same_day_timing_invalid.any():
         raise ValueError("Pre-market or market-hours events are not aligned to same-day exposure.")
 
@@ -575,7 +608,7 @@ def get_comparison_rows() -> tuple[str, int | None]:
     return "comparison_panel_unavailable", None
 
 
-def build_spec_markdown(panel_df: pd.DataFrame) -> str:
+def build_spec_markdown(panel_df: pd.DataFrame, artifact_path: Path = EVENT_PANEL_V2_OUTPUT_PATH) -> str:
     """Create the spec document with diagnostics and explicit alignment rules."""
     event_counts = (
         panel_df["event_type"].value_counts(dropna=False).rename_axis("event_type").reset_index(name="rows")
@@ -686,7 +719,7 @@ def build_spec_markdown(panel_df: pd.DataFrame) -> str:
         "",
         "## Artifact",
         "",
-        f"- Main parquet: `{EVENT_PANEL_V2_OUTPUT_PATH}`",
+        f"- Main parquet: `{artifact_path}`",
         "",
     ]
     return "\n".join(lines)
@@ -720,27 +753,33 @@ def print_summary(panel_df: pd.DataFrame) -> None:
         print(f"{column_name:<30} {percentage:>8.2f}%")
 
 
-def build_event_panel_v2() -> pd.DataFrame:
+def build_event_panel_v2(
+    price_path: Path = PRICE_INPUT_PATH,
+    event_source_path: Path = SEC_FILING_METADATA_PATH,
+    fundamentals_path: Path = FUNDAMENTALS_INPUT_PATH,
+    market_path: Path = MARKET_INPUT_PATH,
+    sentiment_path: Path = FULL_SENTIMENT_INPUT_PATH,
+) -> pd.DataFrame:
     """Build the event-based Phase 2 research panel."""
     prices_df = prepare_prices(
-        load_parquet(PRICE_INPUT_PATH, ["ticker", "date", "adj_close"], "Price labels")
+        load_parquet(price_path, ["ticker", "date", "adj_close"], "Price labels")
     )
-    event_source_df = load_event_source(SEC_FILING_METADATA_PATH)
+    event_source_df = load_event_source(event_source_path)
     event_source_df = align_event_effective_dates(event_source_df, prices_df)
     panel = build_base_event_panel(event_source_df)
 
-    fundamentals_df = load_fundamentals(FUNDAMENTALS_INPUT_PATH)
+    fundamentals_df = load_fundamentals(fundamentals_path)
     panel = attach_event_fundamentals_metadata(panel, fundamentals_df)
     panel = attach_fundamental_snapshot(panel, fundamentals_df, prices_df)
 
-    market_df = load_market_features(MARKET_INPUT_PATH)
+    market_df = load_market_features(market_path)
     panel = attach_market_snapshot(panel, market_df)
 
-    sentiment_df = load_sentiment_context(FULL_SENTIMENT_INPUT_PATH)
+    sentiment_df = load_sentiment_context(sentiment_path)
     panel = attach_sentiment_context(panel, sentiment_df)
 
     panel = finalize_column_order(panel)
-    validate_panel_structure(panel)
+    validate_panel_structure(panel, trading_dates_df=prices_df)
     panel = panel.sort_values(["effective_model_date", "ticker", "event_type"]).reset_index(drop=True)
     return panel
 
@@ -748,18 +787,30 @@ def build_event_panel_v2() -> pd.DataFrame:
 def main() -> None:
     """Build the parquet artifact and the spec document."""
     args = parse_args()
+    price_path = Path(args.price_path)
+    event_source_path = Path(args.event_source_path)
+    fundamentals_path = Path(args.fundamentals_path)
+    market_path = Path(args.market_path)
+    sentiment_path = Path(args.sentiment_path)
     output_path = Path(args.output_path)
     spec_path = Path(args.spec_path)
     ensure_parent_dir(output_path)
     ensure_parent_dir(spec_path)
 
-    print(f"Loading event sources from: {SEC_FILING_METADATA_PATH}")
-    panel_df = build_event_panel_v2()
+    print(f"Loading price data from: {price_path}")
+    print(f"Loading event sources from: {event_source_path}")
+    panel_df = build_event_panel_v2(
+        price_path=price_path,
+        event_source_path=event_source_path,
+        fundamentals_path=fundamentals_path,
+        market_path=market_path,
+        sentiment_path=sentiment_path,
+    )
 
     print(f"Saving event_panel_v2 to: {output_path}")
     panel_df.to_parquet(output_path, index=False)
 
-    spec_markdown = build_spec_markdown(panel_df)
+    spec_markdown = build_spec_markdown(panel_df, artifact_path=output_path)
     print(f"Writing event panel spec to: {spec_path}")
     spec_path.write_text(spec_markdown, encoding="utf-8")
 

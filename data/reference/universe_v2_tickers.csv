@@ -1,0 +1,128 @@
+ticker,sector
+CMCSA,Communication Services
+DIS,Communication Services
+GOOGL,Communication Services
+META,Communication Services
+NFLX,Communication Services
+T,Communication Services
+TMUS,Communication Services
+VZ,Communication Services
+AMZN,Consumer Discretionary
+BKNG,Consumer Discretionary
+F,Consumer Discretionary
+GM,Consumer Discretionary
+HD,Consumer Discretionary
+LOW,Consumer Discretionary
+MCD,Consumer Discretionary
+NKE,Consumer Discretionary
+SBUX,Consumer Discretionary
+TJX,Consumer Discretionary
+ADM,Consumer Staples
+BF-B,Consumer Staples
+BG,Consumer Staples
+CAG,Consumer Staples
+CHD,Consumer Staples
+CL,Consumer Staples
+CLX,Consumer Staples
+CPB,Consumer Staples
+COST,Consumer Staples
+DG,Consumer Staples
+DLTR,Consumer Staples
+EL,Consumer Staples
+GIS,Consumer Staples
+HRL,Consumer Staples
+HSY,Consumer Staples
+KDP,Consumer Staples
+KHC,Consumer Staples
+KMB,Consumer Staples
+KO,Consumer Staples
+KR,Consumer Staples
+MDLZ,Consumer Staples
+MKC,Consumer Staples
+MNST,Consumer Staples
+MO,Consumer Staples
+PEP,Consumer Staples
+PG,Consumer Staples
+PM,Consumer Staples
+SJM,Consumer Staples
+STZ,Consumer Staples
+SYY,Consumer Staples
+TAP,Consumer Staples
+TGT,Consumer Staples
+TSN,Consumer Staples
+WMT,Consumer Staples
+COP,Energy
+CVX,Energy
+EOG,Energy
+OXY,Energy
+PSX,Energy
+SLB,Energy
+XOM,Energy
+AIG,Financials
+BAC,Financials
+BLK,Financials
+C,Financials
+GS,Financials
+JPM,Financials
+MMC,Financials
+MS,Financials
+PGR,Financials
+SCHW,Financials
+WFC,Financials
+ABBV,Health Care
+ABT,Health Care
+AMGN,Health Care
+BMY,Health Care
+DHR,Health Care
+ISRG,Health Care
+JNJ,Health Care
+LLY,Health Care
+MDT,Health Care
+MRK,Health Care
+PFE,Health Care
+TMO,Health Care
+UNH,Health Care
+BA,Industrials
+CAT,Industrials
+DE,Industrials
+ETN,Industrials
+GE,Industrials
+HON,Industrials
+LMT,Industrials
+NOC,Industrials
+RTX,Industrials
+UNP,Industrials
+UPS,Industrials
+AAPL,Information Technology
+ACN,Information Technology
+ADBE,Information Technology
+AMD,Information Technology
+AMAT,Information Technology
+AVGO,Information Technology
+CRM,Information Technology
+CSCO,Information Technology
+IBM,Information Technology
+INTU,Information Technology
+MSFT,Information Technology
+MU,Information Technology
+NVDA,Information Technology
+NOW,Information Technology
+ORCL,Information Technology
+QCOM,Information Technology
+TXN,Information Technology
+APD,Materials
+DD,Materials
+ECL,Materials
+FCX,Materials
+LIN,Materials
+NEM,Materials
+SHW,Materials
+AMT,Real Estate
+O,Real Estate
+PLD,Real Estate
+AEP,Utilities
+DUK,Utilities
+NEE,Utilities
+SO,Utilities
+SRE,Utilities
+XEL,Utilities

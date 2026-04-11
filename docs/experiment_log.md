@@ -1468,3 +1468,155 @@ If the SEC path stays active, keep it structured and simpler:
 - test a narrower grouped layer built only from the strongest clean categories such as `2.02` earnings results and `5.02` / `5.07` governance events
 - test a hybrid SEC metadata panel that keeps the EXP-008 coarse filing timing/count features and adds only the strongest grouped `8-K` flags
 - do not expand into text NLP until the structured SEC metadata path is exhausted
+
+---
+
+## Experiment ID
+EXP-010
+
+### Date
+2026-04-11
+
+### Objective
+Run the clean Phase 5 universe-expansion test on `event_panel_v2` using the locked Phase 4 setup only:
+- wider universe
+- same `5`-day excess-return-sign label
+- same three anchor models
+- no sentiment / no Layer 3 features in the final panel build
+
+### Dataset Version
+Official Phase 5 artifacts:
+- `data/reference/universe_v2_tickers.csv`
+- `docs/universe_v2.md`
+- `data/interim/sec/sec_universe_mapping_v2.parquet`
+- `data/interim/sec/sec_filing_metadata_v2.parquet`
+- `data/interim/event_panel_v2_universe_v2.parquet`
+- `docs/event_panel_spec_v2_universe_v2.md`
+- `reports/results/event_panel_v2_universe_v2_benchmark.csv`
+- `reports/results/event_panel_v2_universe_v2_benchmark.md`
+
+Intermediate non-official artifacts created during failed or aborted attempts:
+- `data/interim/sentiment/sec_filing_sentiment_universe_v2.parquet`
+- `data/interim/features/layer3_sec_sentiment_features_universe_v2.parquet`
+
+### Universe
+`universe_v2` cross-sector large-cap expansion:
+- `126` tickers in the successful run
+- source list stored in `data/reference/universe_v2_tickers.csv`
+
+### Date Range
+Expanded event panel:
+- `event_date`: `2014-12-29` to `2024-12-20`
+- `effective_model_date`: `2015-01-02` to `2024-12-23`
+
+### Feature Set
+Locked feature families only:
+- Layer 1 fundamentals snapshot features
+- Layer 2 market features ending at `t-1`
+- event-context timing features
+
+Explicit no-sentiment setup for the official rerun:
+- passed an empty filing-level sentiment parquet into `panel_builder_event_v2.py`
+- this left all SEC sentiment columns fully missing and they were automatically excluded in training
+
+Explicit feature exclusions carried forward:
+- `gross_margin`
+- `current_filing_sentiment_available`
+
+Auto all-missing exclusions in the successful expanded-universe benchmark:
+- `sec_sentiment_score`
+- `sec_positive_prob`
+- `sec_negative_prob`
+- `sec_neutral_prob`
+- `sec_sentiment_abs`
+- `sec_sentiment_change_prev`
+- `sec_positive_change_prev`
+- `sec_negative_change_prev`
+- `sec_chunk_count`
+- `sec_log_chunk_count`
+
+### Target
+Locked Phase 4 primary label:
+- `5`-trading-day excess return sign
+
+### Validation
+Locked Phase 4 evaluation policy:
+- purged expanding-window CV
+- `5` folds
+- `2024` final holdout unchanged
+- same holdout boundary and model-selection rule as the 34-name anchor
+
+### Models
+Locked Phase 4 model set only:
+- Logistic Regression
+- Random Forest
+- XGBoost
+
+### Preprocessing
+Unchanged training logic:
+- median imputation
+- standard scaling for logistic regression
+- train-fold missingness filtering
+- train-fold clipping
+- same benchmark-mode label construction
+- same locked holdout policy
+
+Phase 5-specific implementation notes:
+- universe expansion required a manual SEC CIK override for `MMC`
+- successful clean rerun built SEC metadata first, then rebuilt the expanded event panel with no sentiment input, then trained the locked benchmark matrix
+
+### Hyperparameters
+No changes from the locked Phase 4 setup.
+
+### Results
+Expanded panel structure:
+- Rows: `4,908`
+- Tickers: `126`
+- Event counts:
+  - `10-Q`: `3,682`
+  - `10-K`: `1,226`
+
+Per-model benchmark results:
+- Logistic Regression:
+  - Mean CV AUC: `0.5013`
+  - Mean CV log loss: `0.7014`
+  - 2024 holdout AUC: `0.5068`
+  - 2024 holdout log loss: `0.6945`
+- Random Forest:
+  - Mean CV AUC: `0.4860`
+  - Mean CV log loss: `0.7005`
+  - 2024 holdout AUC: `0.4859`
+  - 2024 holdout log loss: `0.6979`
+- XGBoost:
+  - Mean CV AUC: `0.4960`
+  - Mean CV log loss: `0.7468`
+  - 2024 holdout AUC: `0.5091`
+  - 2024 holdout log loss: `0.7100`
+
+Selected primary model:
+- `logistic_regression`
+
+Comparison versus the locked 34-name anchor:
+- 34-name best CV AUC: `0.5260`
+- expanded-universe best CV AUC: `0.5013`
+- 34-name best holdout AUC: `0.5237`
+- expanded-universe best holdout AUC: `0.5068`
+
+### Observations
+- The clean no-sentiment universe expansion run completed successfully after two minimal blocking fixes:
+  - manual SEC mapping override for `MMC`
+  - event-timing validation adjustment for two valid non-trading-day / pre-panel-start filing rows
+- Expanding from `34` to `126` names did not improve the locked benchmark.
+- The selected model changed from `random_forest` in the 34-name anchor to `logistic_regression` in the expanded-universe run.
+- The successful official Phase 5 result is the no-sentiment rerun, not the earlier aborted sentiment-bearing build attempts.
+
+### Problems
+- The first expanded-universe SEC metadata build failed because `MMC` was missing from the manual override table.
+- The first clean panel rebuild failed because the validator treated any pre-market or market-hours filing not landing on the same calendar date as an error, even when the raw date was not a tradable session or was before the modeled price panel began.
+- Intermediate sentiment / Layer 3 artifacts were created during earlier failed attempts, but they are not part of the official Phase 5 conclusion.
+
+### Decision
+Do not promote the expanded universe as the new default research universe. Keep the locked 34-name event-panel anchor as the primary setup for now.
+
+### Next Step
+If universe expansion is revisited later, keep the same locked Phase 4 method stack and test whether broader scale only makes sense after stronger features or additional external datasets justify it.

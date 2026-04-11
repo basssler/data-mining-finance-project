@@ -97,6 +97,7 @@ def run_model_matrix(
     embargo_days: int,
     min_train_dates: int,
     threshold: float,
+    panel_name: str,
 ) -> tuple[pd.DataFrame, dict]:
     split_payload = make_event_v1_splits(
         df=panel_df,
@@ -168,7 +169,7 @@ def run_model_matrix(
         cv_summary = summarize_metric_dicts(fold_metrics)
         rows.append(
             {
-                "panel_name": "event_panel_v2",
+                "panel_name": panel_name,
                 "label_variant": variant.variant_name,
                 "model_name": model_name,
                 "cv_auc_mean": cv_summary.get("auc_roc_mean"),
@@ -301,8 +302,10 @@ def main() -> None:
 
     print(f"Loading event panel from: {panel_path}")
     panel_df = load_event_panel(panel_path)
-    print(f"Loading prices from: {PRICE_INPUT_PATH}")
-    prices_df = normalize_price_data(load_price_data(PRICE_INPUT_PATH))
+    panel_name = str(config.get("panel", {}).get("name", "event_panel_v2"))
+    prices_path = Path(config.get("prices", {}).get("path", str(PRICE_INPUT_PATH)))
+    print(f"Loading prices from: {prices_path}")
+    prices_df = normalize_price_data(load_price_data(prices_path))
     variant = VariantSpec(
         variant_name=str(config["label"]["variant_name"]),
         horizon_days=int(config["label"]["horizon_days"]),
@@ -326,6 +329,7 @@ def main() -> None:
         embargo_days=int(config["cv"]["embargo_days"]),
         min_train_dates=int(config["cv"]["min_train_dates"]),
         threshold=0.5,
+        panel_name=panel_name,
     )
 
     print(f"Saving benchmark CSV to: {csv_path}")

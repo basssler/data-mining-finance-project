@@ -57,7 +57,12 @@ MANUAL_SEC_LOOKUP_OVERRIDES = {
         "sec_lookup_ticker": "BF.B",
         "cik": "0000014693",
         "override_note": "Project ticker uses BF-B while SEC commonly lists BF.B.",
-    }
+    },
+    "MMC": {
+        "sec_lookup_ticker": "MMC",
+        "cik": "0000062709",
+        "override_note": "Universe v2 requires a manual SEC CIK override for Marsh & McLennan Companies, Inc.",
+    },
 }
 
 DAILY_FEATURE_COLUMNS = [
