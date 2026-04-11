@@ -1,0 +1,48 @@
+panel:
+  path: data/interim/event_panel_v2_sec_sentiment_v1.parquet
+  name: event_panel_v2_sec_sentiment_v1
+
+prices:
+  path: data/interim/prices/prices_with_labels.parquet
+
+label:
+  variant_name: event_v2_5d_sign
+  horizon_days: 5
+  mode: sign
+  benchmark_mode: sector_equal_weight_ex_self
+
+holdout:
+  start: "2024-01-01"
+
+cv:
+  n_splits: 5
+  embargo_days: 5
+  min_train_dates: 252
+
+models:
+  - logistic_regression
+  - random_forest
+  - xgboost
+
+feature_exclusions:
+  explicit:
+    - gross_margin
+    - current_filing_sentiment_available
+  auto_drop_all_missing: true
+  auto_drop_constant: true
+  max_missingness_pct: 20.0
+
+xgboost:
+  prefer_gpu_if_clean: true
+  fallback_to_cpu: true
+  note: "GPU is used only when the local stack supports clean CUDA prediction without the device-mismatch warning."
+
+random_seed:
+  python: 42
+  numpy: 42
+  sklearn: 42
+  xgboost: 42
+
+outputs:
+  csv: reports/results/event_panel_v2_sec_sentiment_v1_benchmark.csv
+  markdown: reports/results/event_panel_v2_sec_sentiment_v1_benchmark.md
