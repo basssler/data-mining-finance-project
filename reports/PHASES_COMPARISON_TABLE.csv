@@ -1,0 +1,5 @@
+Phase,Experiment_Name,Dataset_Scope,Best_Model,CV_AUC_Mean,CV_Log_Loss_Mean,Holdout_AUC,Holdout_Log_Loss,Universe_Size,Event_Count,Total_Features,Status,Key_Outcome
+4,Event Panel V2 Primary Benchmark,34 Consumer Staples tickers event-driven,random_forest,0.5260,0.6989,0.5237,0.6945,34,1109,72,LOCKED ANCHOR,Event-driven framing improves over daily 5-day by +2% AUC
+5,Universe V2 Expansion Test,126 cross-sector large-cap names,logistic_regression,0.5013,0.7014,0.5068,0.6979,126,4908,~70,REJECTED,Broader universe degrades performance (-3.2% holdout AUC); not ready to expand
+6,SEC Sentiment V1 Reproducibility Check,34 Consumer Staples - reproducibility pass,random_forest,0.5260,0.6989,0.5237,0.6945,34,1109,72,CONFIRMED,Phase 4 SEC sentiment already embedded; no new signal in Phase 6 rerun
+6B,Alpha Vantage Earnings Data Integration,34 Consumer Staples + 20 new AV features,random_forest,0.5232,0.6992,0.5109,0.6947,34,1109,95,INCOMPLETE,All 20 AV features dropped due to <68% coverage; need manifest completion before evaluation
