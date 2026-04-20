@@ -12,9 +12,9 @@
 
 | Model | Mean CV AUC | Mean CV Log Loss | Holdout AUC | Holdout Log Loss | Holdout Precision | Holdout Recall | Holdout Rank IC | XGBoost Backend | Selected Primary |
 |---|---:|---:|---:|---:|---:|---:|---:|---|---|
-| logistic_regression | 0.5181 | 0.7510 | 0.5051 | 0.7409 | 0.5000 | 0.5441 | 0.0778 | cpu |  |
-| random_forest | 0.5260 | 0.6989 | 0.5237 | 0.6945 | 0.5143 | 0.5294 | 0.0201 | cpu | yes |
-| xgboost | 0.5244 | 0.8119 | 0.5290 | 0.7569 | 0.5200 | 0.5735 | 0.0432 | cpu |  |
+| logistic_regression | 0.5254 | 0.7527 | 0.4919 | 0.7492 | 0.5072 | 0.5147 | 0.0538 | cpu |  |
+| random_forest | 0.5228 | 0.6987 | 0.4960 | 0.6999 | 0.4545 | 0.4412 | -0.0455 | cpu |  |
+| xgboost | 0.5415 | 0.7950 | 0.5388 | 0.7474 | 0.5616 | 0.6029 | 0.0902 | cpu | yes |
 
 ## Feature Exclusions
 
@@ -24,14 +24,14 @@
 
 ## Selected Primary Model
 
-- Selected model: `random_forest`
-- Mean CV AUC: `0.5260`
-- Mean CV log loss: `0.6989`
-- 2024 holdout AUC: `0.5237`
-- 2024 holdout log loss: `0.6945`
+- Selected model: `xgboost`
+- Mean CV AUC: `0.5415`
+- Mean CV log loss: `0.7950`
+- 2024 holdout AUC: `0.5388`
+- 2024 holdout log loss: `0.7474`
 
 ## Interpretation
 
-- Against the old daily/event_v1 direction (`event_v1_layer1` best model `hist_gradient_boosting`), the redesigned event setup improves best CV AUC from `0.5056` to `0.5260` and best holdout AUC from `0.5180` to `0.5237`.
+- Against the old daily/event_v1 direction (`event_v1_layer1` best model `hist_gradient_boosting`), the redesigned event setup improves best CV AUC from `0.5056` to `0.5415` and best holdout AUC from `0.5180` to `0.5388`.
 - The redesigned setup is directionally better than the old daily research path, but the edge is still modest. This should be treated as a cleaner anchor, not as proof that the problem is solved.
 - XGBoost ran on CPU in this benchmark because the local stack does not support clean CUDA prediction without the device-mismatch warning.

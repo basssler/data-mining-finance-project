@@ -103,6 +103,7 @@ FUNDAMENTAL_SNAPSHOT_METADATA_COLUMNS = [
     "fund_snapshot_fiscal_year",
     "fund_snapshot_event_type",
     "fund_snapshot_effective_model_date",
+    "financial_profile",
 ]
 
 EXACT_EVENT_METADATA_COLUMNS = [
@@ -317,8 +318,8 @@ def attach_fundamental_snapshot(
     )
 
     snapshot_columns = (
-        ["ticker", "fund_snapshot_effective_model_date"]
-        + FUNDAMENTAL_SNAPSHOT_METADATA_COLUMNS[:-1]
+        ["ticker"]
+        + FUNDAMENTAL_SNAPSHOT_METADATA_COLUMNS
         + LAYER1_FEATURE_COLUMNS
     )
     aligned_fundamentals = aligned_fundamentals[snapshot_columns].copy()
@@ -438,6 +439,7 @@ def finalize_column_order(panel_df: pd.DataFrame) -> pd.DataFrame:
         "fund_snapshot_fiscal_year",
         "fund_snapshot_event_type",
         "fund_snapshot_effective_model_date",
+        "financial_profile",
         "fund_snapshot_is_current_event",
         "market_asof_date",
     ]

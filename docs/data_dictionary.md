@@ -62,6 +62,11 @@ One row per stock-date after aligning fundamentals to daily data
 | roa | float | Return on assets | net_income / total_assets | Layer 1 feature |
 | roe | float | Return on equity | net_income / shareholder_equity | Layer 1 feature |
 | revenue_growth_yoy | float | Revenue growth | (rev_t - rev_t-4q) / rev_t-4q | Layer 1 feature |
+| liquidity_profile_score | float | Composite short-term health score | Average of fixed-threshold liquidity indicators | Layer 1 feature |
+| solvency_profile_score | float | Composite long-term health score | Average of fixed-threshold leverage indicators | Layer 1 feature |
+| profitability_profile_score | float | Composite profitability score | Average of fixed-threshold margin and return indicators | Layer 1 feature |
+| growth_quality_profile_score | float | Composite growth quality score | Average of growth and cash-quality indicators | Layer 1 feature |
+| overall_financial_health_score | float | Overall financial health score | Average of the four profile scores | Layer 1 feature |
 
 ---
 

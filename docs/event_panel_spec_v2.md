@@ -36,7 +36,7 @@ One row in `event_panel_v2` equals one ticker-event.
 - Ticker count: `34`
 - Event date range: `2015-07-31` to `2024-12-19`
 - Effective model date range: `2015-07-31` to `2024-12-19`
-- Fundamentals feature count: `21`
+- Fundamentals feature count: `26`
 - Market feature count: `14`
 - Filing sentiment feature count: `10`
 - Event-context feature count: `2`
@@ -67,9 +67,9 @@ One row in `event_panel_v2` equals one ticker-event.
 | revenue_growth_yoy | 22.0920 |
 | quick_ratio | 17.9441 |
 | earnings_growth_qoq | 14.5176 |
-| accruals_ratio | 13.4355 |
-| roa | 13.4355 |
 | asset_turnover | 13.4355 |
+| roa | 13.4355 |
+| accruals_ratio | 13.4355 |
 | operating_margin | 13.1650 |
 | revenue_growth_qoq | 12.8945 |
 

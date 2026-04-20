@@ -71,6 +71,11 @@ LAYER1_FEATURE_COLUMNS = [
     "earnings_growth_yoy",
     "cfo_to_net_income",
     "accruals_ratio",
+    "liquidity_profile_score",
+    "solvency_profile_score",
+    "profitability_profile_score",
+    "growth_quality_profile_score",
+    "overall_financial_health_score",
 ]
 
 LAYER1_METADATA_COLUMNS = [

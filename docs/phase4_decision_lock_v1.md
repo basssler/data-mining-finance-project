@@ -14,11 +14,13 @@
 
 Phase 4 reran the frozen benchmark matrix on the cleaned event-based setup and established the new anchor for the current 34-ticker universe.
 
-- Selected primary model: `random_forest`
-- Mean CV AUC: `0.5260`
-- Mean CV log loss: `0.6989`
-- 2024 holdout AUC: `0.5237`
-- 2024 holdout log loss: `0.6945`
+- Selected primary model: `xgboost`
+- Mean CV AUC: `0.5415`
+- Mean CV log loss: `0.7950`
+- 2024 holdout AUC: `0.5388`
+- 2024 holdout log loss: `0.7474`
+
+This updated anchor includes the added financial profile score layer built from liquidity, solvency, profitability, and growth-quality composites.
 
 The full per-model benchmark is recorded in:
 
@@ -75,7 +77,7 @@ The following should carry forward unchanged into the next phase unless a hard b
 
 - `event_panel_v2` as the base research panel
 - 5-day excess-return sign as the primary label
-- `random_forest` as the current selected primary model
+- `xgboost` as the current selected primary model
 - logistic regression and XGBoost as benchmark comparators
 - explicit dead-feature exclusions
 - current CV and holdout policy
@@ -96,8 +98,8 @@ The following are intentionally not part of the new anchor and should not be rev
 Relative to the old daily/event_v1 direction, the redesigned event-based setup is materially cleaner and modestly better on the benchmark metrics that matter most:
 
 - old `event_v1_layer1` best CV AUC: `0.5056`
-- new `event_panel_v2` primary CV AUC: `0.5260`
+- new `event_panel_v2` primary CV AUC: `0.5415`
 - old `event_v1_layer1` holdout AUC: `0.5180`
-- new `event_panel_v2` primary holdout AUC: `0.5237`
+- new `event_panel_v2` primary holdout AUC: `0.5388`
 
-That improvement is not large enough to justify method churn, but it is strong enough to lock the redesigned pipeline as the post-fix benchmark anchor before universe expansion.
+That improvement is still modest, but it is strong enough to keep the redesigned pipeline with financial profile scores as the current benchmark anchor before broader scaling or deeper external-data work.

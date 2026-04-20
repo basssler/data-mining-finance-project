@@ -65,6 +65,11 @@ FEATURE_COLUMNS = [
     "earnings_growth_yoy",
     "cfo_to_net_income",
     "accruals_ratio",
+    "liquidity_profile_score",
+    "solvency_profile_score",
+    "profitability_profile_score",
+    "growth_quality_profile_score",
+    "overall_financial_health_score",
 ]
 
 FEATURE_CATEGORY_NOTES: Dict[str, str] = {
@@ -161,6 +166,88 @@ def safe_divide(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
     result = pd.Series(np.nan, index=numerator.index, dtype="float64")
     result.loc[valid_denominator] = numerator.loc[valid_denominator] / denominator.loc[valid_denominator]
     return result
+
+
+def bounded_indicator(
+    series: pd.Series,
+    *,
+    lower_good: float | None = None,
+    upper_good: float | None = None,
+) -> pd.Series:
+    """Convert one ratio into a simple 0/1/NaN strength indicator.
+
+    The thresholds are fixed project heuristics, not fit from the dataset, so
+    they stay safe for time-aware evaluation and easy to explain in class.
+    """
+    numeric = pd.to_numeric(series, errors="coerce")
+    indicator = pd.Series(np.nan, index=numeric.index, dtype="float64")
+    valid = numeric.notna() & np.isfinite(numeric)
+    if lower_good is not None:
+        indicator.loc[valid] = (numeric.loc[valid] >= lower_good).astype("float64")
+    if upper_good is not None:
+        upper_values = (numeric.loc[valid] <= upper_good).astype("float64")
+        if lower_good is None:
+            indicator.loc[valid] = upper_values
+        else:
+            indicator.loc[valid] = indicator.loc[valid] * upper_values
+    return indicator
+
+
+def average_indicators(*indicator_series: pd.Series) -> pd.Series:
+    """Average multiple 0/1/NaN indicator series row-wise."""
+    indicator_frame = pd.concat(indicator_series, axis=1)
+    valid_counts = indicator_frame.notna().sum(axis=1)
+    averaged = indicator_frame.mean(axis=1, skipna=True)
+    averaged.loc[valid_counts == 0] = np.nan
+    return averaged.astype("float64")
+
+
+def classify_financial_profile(features_df: pd.DataFrame) -> pd.Series:
+    """Assign a plain-English profile label from the composite scores."""
+    liquidity = pd.to_numeric(features_df["liquidity_profile_score"], errors="coerce")
+    solvency = pd.to_numeric(features_df["solvency_profile_score"], errors="coerce")
+    profitability = pd.to_numeric(features_df["profitability_profile_score"], errors="coerce")
+    growth = pd.to_numeric(features_df["growth_quality_profile_score"], errors="coerce")
+
+    profile = pd.Series(pd.NA, index=features_df.index, dtype="string")
+
+    stable_mask = (
+        (liquidity >= 0.75)
+        & (solvency >= 0.67)
+        & (profitability >= 0.75)
+        & (growth >= 0.50)
+    )
+    mature_mask = (
+        (liquidity >= 0.50)
+        & (solvency >= 0.67)
+        & (profitability >= 0.50)
+        & (growth < 0.50)
+    )
+    growth_mask = (
+        (growth >= 0.75)
+        & (profitability >= 0.50)
+        & ((liquidity < 0.50) | (solvency < 0.67))
+    )
+    short_term_mask = (
+        (liquidity >= 0.75)
+        & (solvency < 0.67)
+        & profile.isna()
+    )
+    distressed_mask = (
+        (liquidity < 0.50)
+        & ((solvency < 0.34) | (profitability < 0.50))
+    )
+
+    profile.loc[stable_mask] = "stable_compounder"
+    profile.loc[mature_mask & profile.isna()] = "mature_defensive"
+    profile.loc[growth_mask & profile.isna()] = "high_growth_fragile"
+    profile.loc[short_term_mask] = "short_term_healthy_levered"
+    profile.loc[distressed_mask & profile.isna()] = "distressed_weak_quality"
+    profile.loc[profile.isna()] = "mixed_profile"
+
+    no_score_mask = liquidity.isna() & solvency.isna() & profitability.isna() & growth.isna()
+    profile.loc[no_score_mask] = pd.NA
+    return profile
 
 
 def compute_average_balance(df: pd.DataFrame, column_name: str) -> pd.Series:
@@ -275,6 +362,40 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
         average_total_assets,
     )
 
+    # Composite profile scores
+    # These scores convert related ratios into fixed-threshold strength signals
+    # so they can be used both for interpretation and as low-noise model inputs.
+    features_df["liquidity_profile_score"] = average_indicators(
+        bounded_indicator(features_df["current_ratio"], lower_good=1.5),
+        bounded_indicator(features_df["quick_ratio"], lower_good=1.0),
+        bounded_indicator(features_df["cash_ratio"], lower_good=0.2),
+        bounded_indicator(features_df["working_capital_to_total_assets"], lower_good=0.1),
+    )
+    features_df["solvency_profile_score"] = average_indicators(
+        bounded_indicator(features_df["debt_to_equity"], upper_good=1.5),
+        bounded_indicator(features_df["debt_to_assets"], upper_good=0.5),
+        bounded_indicator(features_df["long_term_debt_ratio"], upper_good=0.3),
+    )
+    features_df["profitability_profile_score"] = average_indicators(
+        bounded_indicator(features_df["operating_margin"], lower_good=0.10),
+        bounded_indicator(features_df["net_margin"], lower_good=0.05),
+        bounded_indicator(features_df["roa"], lower_good=0.05),
+        bounded_indicator(features_df["roe"], lower_good=0.10),
+    )
+    features_df["growth_quality_profile_score"] = average_indicators(
+        bounded_indicator(features_df["revenue_growth_yoy"], lower_good=0.05),
+        bounded_indicator(features_df["earnings_growth_yoy"], lower_good=0.05),
+        bounded_indicator(features_df["cfo_to_net_income"], lower_good=0.8, upper_good=2.0),
+        bounded_indicator(features_df["accruals_ratio"], upper_good=0.05),
+    )
+    features_df["overall_financial_health_score"] = average_indicators(
+        features_df["liquidity_profile_score"],
+        features_df["solvency_profile_score"],
+        features_df["profitability_profile_score"],
+        features_df["growth_quality_profile_score"],
+    )
+    features_df["financial_profile"] = classify_financial_profile(features_df)
+
     return features_df
 
 
@@ -316,6 +437,11 @@ def print_feature_category_notes() -> None:
         "gross_margin, inventory_turnover, and receivables_turnover may be sparse "
         "because they depend on concepts that are not always available or cleanly "
         "reported in EDGAR-derived fundamentals."
+    )
+    print(
+        " The profile scores are fixed-threshold composites built from the raw ratios "
+        "to support firm segmentation and to test whether structured financial "
+        "condition features help the benchmark model."
     )
 
 
