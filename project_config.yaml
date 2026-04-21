@@ -1,0 +1,52 @@
+prediction_horizons:
+  - 5
+  - 21
+universe:
+  name: wrds_large_cap_starter
+  description: Starter daily US large-cap universe for the WRDS stock-date pipeline.
+  tickers:
+    - AAPL
+    - MSFT
+    - AMZN
+    - GOOGL
+    - META
+    - NVDA
+    - BRK.B
+    - JPM
+    - XOM
+    - UNH
+date_range:
+  start: "2015-01-01"
+  end: "2024-12-31"
+frequency: daily
+objective: binary_classification
+label_definition:
+  positive_class_rule: forward_return_greater_than_zero
+  negative_class_rule: forward_return_less_than_or_equal_to_zero
+primary_id_fields:
+  - gvkey
+  - permno
+  - ticker
+  - date
+classification_fields:
+  sector_field: gics_sector
+  industry_field: gics_industry
+peer_groups:
+  - industry
+  - sector
+  - size_bucket
+  - sector_x_size_bucket
+validation:
+  train_validation_start: "2015-01-01"
+  train_validation_end: "2023-12-31"
+  holdout_start: "2024-01-01"
+  holdout_end: "2024-12-31"
+  n_splits: 5
+  gap_days: 5
+  min_train_days: 252
+paths:
+  raw_wrds_dir: data/raw/wrds
+  interim_wrds_dir: data/interim/wrds
+  interim_feature_dir: data/interim/features
+  processed_dir: data/processed/stock_prediction
+  reports_dir: reports/results

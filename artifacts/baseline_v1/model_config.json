@@ -1,0 +1,66 @@
+{
+  "config": {
+    "panel": {
+      "path": "data/interim/event_panel_v2.parquet",
+      "name": "event_panel_v2"
+    },
+    "label": {
+      "variant_name": "event_v2_5d_sign",
+      "horizon_days": 5,
+      "mode": "sign",
+      "benchmark_mode": "sector_equal_weight_ex_self"
+    },
+    "holdout": {
+      "start": "2024-01-01"
+    },
+    "cv": {
+      "n_splits": 5,
+      "embargo_days": 5,
+      "min_train_dates": 252
+    },
+    "models": [
+      "logistic_regression",
+      "random_forest",
+      "xgboost"
+    ],
+    "feature_exclusions": {
+      "explicit": [
+        "gross_margin",
+        "current_filing_sentiment_available"
+      ],
+      "auto_drop_all_missing": true,
+      "auto_drop_constant": true,
+      "max_missingness_pct": 20.0
+    },
+    "xgboost": {
+      "prefer_gpu_if_clean": true,
+      "fallback_to_cpu": true,
+      "note": "GPU is used only when the local stack supports clean CUDA prediction without the device-mismatch warning."
+    },
+    "random_seed": {
+      "python": 42,
+      "numpy": 42,
+      "sklearn": 42,
+      "xgboost": 42
+    },
+    "outputs": {
+      "csv": "reports/results/event_panel_v2_primary_benchmark.csv",
+      "markdown": "reports/results/event_panel_v2_primary_benchmark.md",
+      "shap_plot": "reports/results/event_panel_v2_primary_shap_summary.png",
+      "shap_csv": "reports/results/event_panel_v2_primary_shap_importance.csv"
+    }
+  },
+  "selected_model_name": "xgboost",
+  "selected_model_cv_auc_mean": 0.541543994076417,
+  "selected_model_holdout_auc": 0.5387894288150042,
+  "selected_model_holdout_log_loss": 0.7473852396157402,
+  "summary": {
+    "best_model_name": "xgboost",
+    "explicit_exclusions": [
+      "gross_margin",
+      "current_filing_sentiment_available"
+    ],
+    "auto_all_missing": [],
+    "auto_constant": []
+  }
+}

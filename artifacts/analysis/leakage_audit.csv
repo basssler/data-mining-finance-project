@@ -1,0 +1,50 @@
+feature_name,data_available_at_prediction_time,possible_overlap_with_target,leakage_risk_level,evidence,recommended_fix
+accruals_ratio,yes,no,low,Uses event-safe panel alignment by default.,
+asset_turnover,yes,no,low,Uses event-safe panel alignment by default.,
+cash_ratio,yes,no,low,Uses event-safe panel alignment by default.,
+cfo_to_net_income,yes,no,low,Uses event-safe panel alignment by default.,
+current_filing_fundamentals_available,yes,no,low,Uses event-safe panel alignment by default.,
+current_ratio,yes,no,low,Uses event-safe panel alignment by default.,
+days_since_prior_event,yes,no,low,Recency features are likely safe if computed from prior events only.,
+days_since_prior_same_event_type,yes,no,low,Recency features are likely safe if computed from prior events only.,
+debt_to_assets,yes,no,low,Uses event-safe panel alignment by default.,
+debt_to_equity,yes,no,low,Uses event-safe panel alignment by default.,
+earnings_growth_qoq,yes,no,low,Uses event-safe panel alignment by default.,
+growth_quality_profile_score,yes,no,low,Uses event-safe panel alignment by default.,
+liquidity_profile_score,yes,no,low,Uses event-safe panel alignment by default.,
+long_term_debt_ratio,yes,no,low,Uses event-safe panel alignment by default.,
+net_margin,yes,no,low,Uses event-safe panel alignment by default.,
+operating_margin,yes,no,low,Uses event-safe panel alignment by default.,
+overall_financial_health_score,yes,no,low,Uses event-safe panel alignment by default.,
+profitability_profile_score,yes,no,low,Uses event-safe panel alignment by default.,
+quick_ratio,yes,no,low,Uses event-safe panel alignment by default.,
+revenue_growth_qoq,yes,no,low,Uses event-safe panel alignment by default.,
+roa,yes,no,low,Uses event-safe panel alignment by default.,
+roe,yes,no,low,Uses event-safe panel alignment by default.,
+solvency_profile_score,yes,no,low,Uses event-safe panel alignment by default.,
+working_capital_to_total_assets,yes,no,low,Uses event-safe panel alignment by default.,
+abnormal_volume_flag,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+abs_return_shock_1d,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+beta_63d_to_sector,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+drawdown_21d,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+fund_snapshot_is_current_event,yes,no,medium,Availability/context flags can encode timing or panel-construction structure.,Confirm these flags do not act as a shortcut for target timing.
+log_volume,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+overnight_gap_1d,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+realized_vol_21d,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+realized_vol_63d,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+rel_return_10d,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+rel_return_21d,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+rel_return_5d,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+return_zscore_21d,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+sec_chunk_count,yes,no,medium,SEC sentiment features depend on filing availability and same-event alignment.,Verify filing timestamp and same-event extraction path.
+sec_log_chunk_count,yes,no,medium,SEC sentiment features depend on filing availability and same-event alignment.,Verify filing timestamp and same-event extraction path.
+sec_negative_change_prev,yes,no,medium,SEC sentiment features depend on filing availability and same-event alignment.,Verify filing timestamp and same-event extraction path.
+sec_negative_prob,yes,no,medium,SEC sentiment features depend on filing availability and same-event alignment.,Verify filing timestamp and same-event extraction path.
+sec_neutral_prob,yes,no,medium,SEC sentiment features depend on filing availability and same-event alignment.,Verify filing timestamp and same-event extraction path.
+sec_positive_change_prev,yes,no,medium,SEC sentiment features depend on filing availability and same-event alignment.,Verify filing timestamp and same-event extraction path.
+sec_positive_prob,yes,no,medium,SEC sentiment features depend on filing availability and same-event alignment.,Verify filing timestamp and same-event extraction path.
+sec_sentiment_abs,yes,no,medium,SEC sentiment features depend on filing availability and same-event alignment.,Verify filing timestamp and same-event extraction path.
+sec_sentiment_change_prev,yes,no,medium,SEC sentiment features depend on filing availability and same-event alignment.,Verify filing timestamp and same-event extraction path.
+sec_sentiment_score,yes,no,medium,SEC sentiment features depend on filing availability and same-event alignment.,Verify filing timestamp and same-event extraction path.
+vol_ratio_21d_63d,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
+volume_ratio_20d,yes,possible_if_window_misaligned,medium,Market feature must be built from windows ending strictly before effective_model_date.,Confirm rolling window ends at t-1 and does not bleed into forward return window.
