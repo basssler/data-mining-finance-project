@@ -10,9 +10,12 @@ import random
 import sys
 from pathlib import Path
 
+import matplotlib
 import numpy as np
 import pandas as pd
 import yaml
+
+matplotlib.use("Agg")
 
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
@@ -91,6 +94,14 @@ def load_old_baseline() -> dict | None:
         "holdout_auc": best["holdout"]["holdout_metrics"]["auc_roc"],
         "holdout_log_loss": best["holdout"]["holdout_metrics"]["log_loss"],
     }
+
+
+def resolve_shap_output_paths(config: dict) -> tuple[Path, Path]:
+    outputs = config["outputs"]
+    csv_path = Path(outputs["csv"])
+    shap_plot = Path(outputs.get("shap_plot", csv_path.with_name(f"{csv_path.stem}_shap_summary.png")))
+    shap_csv = Path(outputs.get("shap_csv", csv_path.with_name(f"{csv_path.stem}_shap_importance.csv")))
+    return shap_plot, shap_csv
 
 
 def run_model_matrix(
@@ -222,6 +233,107 @@ def run_model_matrix(
     return result_df, summary
 
 
+def export_selected_model_shap(
+    panel_df: pd.DataFrame,
+    variant: VariantSpec,
+    candidate_features: list[str],
+    explicit_exclusions: list[str],
+    holdout_start: str,
+    n_splits: int,
+    embargo_days: int,
+    min_train_dates: int,
+    selected_model_name: str,
+    shap_plot_path: Path,
+    shap_csv_path: Path,
+) -> dict | None:
+    if selected_model_name != "xgboost":
+        return None
+
+    try:
+        import matplotlib.pyplot as plt
+        import shap
+    except ImportError as exc:
+        raise ImportError(
+            "SHAP export requires the optional 'shap' dependency. Install it with `pip install shap`."
+        ) from exc
+
+    split_payload = make_event_v1_splits(
+        df=panel_df,
+        date_col="date",
+        horizon_days=variant.horizon_days,
+        n_splits=n_splits,
+        embargo_days=embargo_days,
+        holdout_start=holdout_start,
+        min_train_dates=min_train_dates,
+    )
+    global_candidates = [column for column in candidate_features if column not in explicit_exclusions]
+    kept_global, _, _ = compute_global_feature_exclusions(
+        panel_df,
+        global_candidates,
+        holdout_start=holdout_start,
+    )
+
+    holdout_train_full = panel_df.iloc[split_payload["holdout"]["train_indices"]].copy()
+    holdout_full = panel_df.iloc[split_payload["holdout"]["holdout_indices"]].copy()
+    holdout_train_active, _ = apply_variant_label_mode(holdout_train_full, variant)
+    holdout_active, _ = apply_variant_label_mode(holdout_full, variant)
+    holdout_usable, _, _, _ = select_usable_features(holdout_train_active, kept_global)
+    clipped_train, clipped_holdout = clip_outliers(holdout_train_active, holdout_active, holdout_usable)
+    fitted_model, backend = fit_model(
+        selected_model_name,
+        clipped_train[holdout_usable],
+        clipped_train["target"].astype(int),
+    )
+
+    imputer = fitted_model.named_steps["imputer"]
+    model = fitted_model.named_steps["model"]
+    transformed_holdout = pd.DataFrame(
+        imputer.transform(clipped_holdout[holdout_usable]),
+        columns=holdout_usable,
+        index=clipped_holdout.index,
+    )
+    explainer = shap.TreeExplainer(model)
+    shap_values = explainer.shap_values(transformed_holdout)
+    if isinstance(shap_values, list):
+        shap_matrix = np.asarray(shap_values[-1])
+    else:
+        shap_matrix = np.asarray(shap_values)
+    if shap_matrix.ndim == 3:
+        shap_matrix = shap_matrix[:, :, -1]
+
+    mean_abs_shap = np.abs(shap_matrix).mean(axis=0)
+    shap_importance_df = (
+        pd.DataFrame(
+            {
+                "feature": holdout_usable,
+                "mean_abs_shap": mean_abs_shap,
+                "mean_feature_value": transformed_holdout.mean(axis=0).to_numpy(),
+            }
+        )
+        .sort_values("mean_abs_shap", ascending=False)
+        .reset_index(drop=True)
+    )
+
+    ensure_parent_dir(shap_plot_path)
+    ensure_parent_dir(shap_csv_path)
+    shap_importance_df.to_csv(shap_csv_path, index=False)
+
+    plt.figure(figsize=(12, 8))
+    shap.summary_plot(shap_matrix, transformed_holdout, show=False, max_display=20)
+    plt.tight_layout()
+    plt.savefig(shap_plot_path, dpi=200, bbox_inches="tight")
+    plt.close()
+
+    return {
+        "plot_path": str(shap_plot_path),
+        "csv_path": str(shap_csv_path),
+        "row_count": int(len(transformed_holdout)),
+        "feature_count": int(len(holdout_usable)),
+        "backend": backend,
+        "top_feature": str(shap_importance_df.iloc[0]["feature"]) if not shap_importance_df.empty else None,
+    }
+
+
 def build_markdown_report(result_df: pd.DataFrame, summary: dict, old_baseline: dict | None) -> str:
     best_row = result_df.loc[result_df["is_selected_primary_model"]].iloc[0]
     lines = [
@@ -304,6 +416,7 @@ def main() -> None:
     panel_path = Path(config["panel"]["path"])
     csv_path = Path(config["outputs"]["csv"])
     markdown_path = Path(config["outputs"]["markdown"])
+    shap_plot_path, shap_csv_path = resolve_shap_output_paths(config)
     ensure_parent_dir(csv_path)
     ensure_parent_dir(markdown_path)
 
@@ -347,6 +460,20 @@ def main() -> None:
     print(f"Saving benchmark Markdown to: {markdown_path}")
     markdown_path.write_text(markdown, encoding="utf-8")
 
+    shap_summary = export_selected_model_shap(
+        panel_df=labeled_panel_df,
+        variant=variant,
+        candidate_features=resolve_candidate_features(labeled_panel_df, config),
+        explicit_exclusions=list(config["feature_exclusions"]["explicit"]),
+        holdout_start=str(config["holdout"]["start"]),
+        n_splits=int(config["cv"]["n_splits"]),
+        embargo_days=int(config["cv"]["embargo_days"]),
+        min_train_dates=int(config["cv"]["min_train_dates"]),
+        selected_model_name=str(summary["best_model_name"]),
+        shap_plot_path=shap_plot_path,
+        shap_csv_path=shap_csv_path,
+    )
+
     best_row = result_df.loc[result_df["is_selected_primary_model"]].iloc[0]
     print("\nPhase 4 Benchmark Summary")
     print("-" * 60)
@@ -356,6 +483,14 @@ def main() -> None:
             f"holdout_auc={format_metric(row['holdout_auc'])} backend={row['xgboost_backend']}"
         )
     print(f"\nSelected primary model: {best_row['model_name']}")
+    if shap_summary is not None:
+        print(
+            f"SHAP exported for selected model on {shap_summary['row_count']} holdout rows "
+            f"across {shap_summary['feature_count']} features."
+        )
+        print(f"SHAP top feature: {shap_summary['top_feature']}")
+        print(f"SHAP plot: {shap_summary['plot_path']}")
+        print(f"SHAP CSV: {shap_summary['csv_path']}")
 
 
 if __name__ == "__main__":

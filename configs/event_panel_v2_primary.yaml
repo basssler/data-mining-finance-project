@@ -43,3 +43,5 @@ random_seed:
 outputs:
   csv: reports/results/event_panel_v2_primary_benchmark.csv
   markdown: reports/results/event_panel_v2_primary_benchmark.md
+  shap_plot: reports/results/event_panel_v2_primary_shap_summary.png
+  shap_csv: reports/results/event_panel_v2_primary_shap_importance.csv
