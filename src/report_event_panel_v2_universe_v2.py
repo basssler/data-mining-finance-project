@@ -76,6 +76,11 @@ def get_selected_row(df: pd.DataFrame) -> pd.Series:
     return selected.iloc[0]
 
 
+def metric_delta_text(expanded_value: float, current_value: float) -> str:
+    delta = float(expanded_value) - float(current_value)
+    return f"{delta:+.4f}"
+
+
 def build_per_model_table(current_df: pd.DataFrame, expanded_df: pd.DataFrame) -> list[str]:
     merged = current_df.merge(
         expanded_df,
@@ -123,7 +128,7 @@ def build_decision_section(current_best: pd.Series, expanded_best: pd.Series) ->
     lines = [
         "## Decision",
         "",
-        f"- Did more names improve stability or signal? `{'yes' if should_switch else 'mixed_or_no'}`. Expanded-universe best CV AUC moved from `{format_metric(current_best['cv_auc_mean'])}` to `{format_metric(expanded_best['cv_auc_mean'])}`, and best holdout AUC moved from `{format_metric(current_best['holdout_auc'])}` to `{format_metric(expanded_best['holdout_auc'])}`.",
+        f"- Did more names improve stability or signal? `{'yes' if should_switch else 'mixed_or_no'}`. Expanded-universe best CV AUC moved from `{format_metric(current_best['cv_auc_mean'])}` to `{format_metric(expanded_best['cv_auc_mean'])}` (`{metric_delta_text(expanded_best['cv_auc_mean'], current_best['cv_auc_mean'])}`), and best holdout AUC moved from `{format_metric(current_best['holdout_auc'])}` to `{format_metric(expanded_best['holdout_auc'])}` (`{metric_delta_text(expanded_best['holdout_auc'], current_best['holdout_auc'])}`).",
         f"- Did the same primary model remain best? `{'yes' if same_model else 'no'}`. Current locked winner: `{current_best['model_name']}`. Expanded-universe winner: `{expanded_best['model_name']}`.",
         f"- Should the expanded universe become the new default research universe? `{'yes' if should_switch else 'not_yet'}`.",
     ]
@@ -172,7 +177,7 @@ def build_markdown(
         "## Interpretation",
         "",
         "- This Phase 5 report is the scale test only. It does not change the observation unit, label horizon, feature families, or model set.",
-        "- If the expanded universe wins cleanly, it becomes the better pre-external-data anchor because it adds cross-sectional breadth without changing the locked method stack.",
+        f"- The canonical enriched benchmark remains the 34-name `event_panel_v2` result unless the expanded panel beats it on both CV and holdout AUC. Current comparison: CV AUC `{format_metric(current_best['cv_auc_mean'])}` vs `{format_metric(expanded_best['cv_auc_mean'])}`, holdout AUC `{format_metric(current_best['holdout_auc'])}` vs `{format_metric(expanded_best['holdout_auc'])}`.",
     ]
     return "\n".join(lines) + "\n"
 

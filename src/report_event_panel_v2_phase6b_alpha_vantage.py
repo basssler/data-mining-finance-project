@@ -79,6 +79,30 @@ def load_manifest_summary(path: Path) -> dict:
     }
 
 
+def manifest_is_complete(manifest_summary: dict) -> bool:
+    return int(manifest_summary["status_counts"].get("pending", 0)) == 0 and int(
+        manifest_summary["status_counts"].get("failed", 0)
+    ) == 0
+
+
+def benchmark_equality_state(baseline_df: pd.DataFrame, additive_df: pd.DataFrame) -> str:
+    compare_columns = [
+        "model_name",
+        "cv_auc_mean",
+        "cv_log_loss_mean",
+        "holdout_auc",
+        "holdout_log_loss",
+        "is_selected_primary_model",
+    ]
+    left = baseline_df[compare_columns].sort_values("model_name").reset_index(drop=True)
+    right = additive_df[compare_columns].sort_values("model_name").reset_index(drop=True)
+    return "exact_match" if left.equals(right) else "different"
+
+
+def metric_delta(value: float, baseline_value: float) -> float:
+    return float(value) - float(baseline_value)
+
+
 def load_panel_summary(path: Path) -> dict:
     panel_df = pd.read_parquet(path)
     av_columns = [column for column in panel_df.columns if column.startswith("av_")]
@@ -154,6 +178,8 @@ def build_benchmark_markdown(
     )
     baseline_best = get_selected_row(baseline_df)
     additive_best = get_selected_row(additive_df)
+    manifest_complete = manifest_is_complete(manifest_summary)
+    equality_state = benchmark_equality_state(baseline_df, additive_df)
     lines = [
         "# Event Panel V2 Phase 6B Alpha Vantage Benchmark",
         "",
@@ -163,6 +189,7 @@ def build_benchmark_markdown(
         "- One additive external dataset family only: Alpha Vantage earnings estimates/outcomes.",
         "- Models unchanged: logistic regression, random forest, XGBoost.",
         f"- Manifest completion state: `{manifest_summary['status_counts']}`.",
+        f"- Full manifest complete: `{'yes' if manifest_complete else 'no'}`.",
         "",
         "## Panel Summary",
         "",
@@ -199,11 +226,16 @@ def build_benchmark_markdown(
             "",
             "## Decision",
             "",
-            f"- Baseline selected model: `{baseline_best['model_name']}`",
-            f"- Additive selected model: `{additive_best['model_name']}`",
-            "- Current benchmark result is identical to baseline because every new Alpha Vantage feature was dropped by the existing 20% train-fold missingness rule under the partial backfill coverage.",
-            "- This should be treated as a partial-cache diagnostic run, not the final official Phase 6B verdict, until the remaining manifest rows are fetched with refreshed or replacement API keys.",
-            "- This benchmark should be read as the apples-to-apples Phase 6B test against the locked Phase 4 anchor.",
+            f"- Baseline selected model: `{baseline_best['model_name']}` with CV AUC `{format_metric(baseline_best['cv_auc_mean'])}` and holdout AUC `{format_metric(baseline_best['holdout_auc'])}`.",
+            f"- Additive selected model: `{additive_best['model_name']}` with CV AUC `{format_metric(additive_best['cv_auc_mean'])}` and holdout AUC `{format_metric(additive_best['holdout_auc'])}`.",
+            f"- Benchmark equality state versus the canonical enriched anchor: `{equality_state}`.",
+            f"- Additive deltas on the selected rows: CV AUC `{metric_delta(additive_best['cv_auc_mean'], baseline_best['cv_auc_mean']):+.4f}`, holdout AUC `{metric_delta(additive_best['holdout_auc'], baseline_best['holdout_auc']):+.4f}`.",
+            (
+                "- The manifest is complete, so this memo should be read as the current Phase 6B benchmark result for the checked-in artifacts."
+                if manifest_complete
+                else "- The manifest is not complete, so this memo should be read as a provisional Phase 6B benchmark result."
+            ),
+            "- This benchmark remains an apples-to-apples test against the canonical enriched `event_panel_v2` anchor.",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -220,13 +252,12 @@ def build_decision_doc(
 ) -> str:
     baseline_best = get_selected_row(baseline_df)
     additive_best = get_selected_row(additive_df)
-    manifest_complete = int(manifest_summary["status_counts"].get("pending", 0)) == 0 and int(
-        manifest_summary["status_counts"].get("failed", 0)
-    ) == 0
+    manifest_complete = manifest_is_complete(manifest_summary)
     additive_wins = (
         float(additive_best["cv_auc_mean"]) > float(baseline_best["cv_auc_mean"])
         and float(additive_best["holdout_auc"]) >= float(baseline_best["holdout_auc"])
     )
+    equality_state = benchmark_equality_state(baseline_df, additive_df)
     decision = "PROMOTE" if additive_wins else "FREEZE"
     lines = [
         "# Phase 6B Alpha Vantage Earnings Test V1",
@@ -278,7 +309,13 @@ def build_decision_doc(
         "",
         f"- Baseline selected model: `{baseline_best['model_name']}` with CV AUC `{format_metric(baseline_best['cv_auc_mean'])}` and holdout AUC `{format_metric(baseline_best['holdout_auc'])}`.",
         f"- Alpha Vantage selected model: `{additive_best['model_name']}` with CV AUC `{format_metric(additive_best['cv_auc_mean'])}` and holdout AUC `{format_metric(additive_best['holdout_auc'])}`.",
-        "- The additive benchmark exactly matched baseline because all Alpha Vantage columns were excluded by the existing missingness filter at the current partial-coverage state.",
+        f"- Benchmark equality state versus the canonical enriched anchor: `{equality_state}`.",
+        f"- Selected-row delta versus the canonical enriched anchor: CV AUC `{metric_delta(additive_best['cv_auc_mean'], baseline_best['cv_auc_mean']):+.4f}`, holdout AUC `{metric_delta(additive_best['holdout_auc'], baseline_best['holdout_auc']):+.4f}`.",
+        (
+            "- Interpretation: the Alpha Vantage block changed the benchmark outcome. On the current artifacts it lowers selected-model CV AUC but raises selected-model holdout AUC, so the result is mixed rather than identical to baseline."
+            if equality_state != "exact_match"
+            else "- Interpretation: the Alpha Vantage block did not change the benchmark outcome on the current artifacts."
+        ),
         "",
         "## Recommendation",
         "",
@@ -289,11 +326,11 @@ def build_decision_doc(
     ]
     if not additive_wins:
         lines.append(
-            "- Current result: keep the Phase 4 anchor as the primary setup and treat Alpha Vantage earnings data as a tested but not-yet-promoted additive layer."
+            "- Current result: keep the canonical enriched `event_panel_v2` benchmark as the primary setup and treat Alpha Vantage earnings data as a tested but not-yet-promoted additive layer."
         )
     if not manifest_complete:
         lines.append(
-            "- Current blocker: Alpha Vantage throttled all available keys before the 34-ticker backfill finished. The present memo is therefore provisional until the remaining pending manifest rows are fetched."
+            "- Current blocker: the manifest still has unfinished rows, so the present memo is provisional until the remaining fetches complete."
         )
     return "\n".join(lines) + "\n"
 

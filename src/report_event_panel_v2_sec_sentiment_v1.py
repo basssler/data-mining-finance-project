@@ -60,7 +60,7 @@ def load_panel_stats(path: Path) -> dict:
     return {
         "rows": int(len(panel_df)),
         "tickers": int(panel_df["ticker"].nunique()),
-        "feature_count": int(len(panel_df.columns)),
+        "column_count": int(len(panel_df.columns)),
         "sentiment_columns": sentiment_columns,
     }
 
@@ -70,6 +70,20 @@ def get_selected_row(df: pd.DataFrame) -> pd.Series:
     if selected.empty:
         raise ValueError("No selected primary model row was found.")
     return selected.iloc[0]
+
+
+def benchmarks_match(phase4_df: pd.DataFrame, phase6_df: pd.DataFrame) -> bool:
+    compare_columns = [
+        "model_name",
+        "cv_auc_mean",
+        "cv_log_loss_mean",
+        "holdout_auc",
+        "holdout_log_loss",
+        "is_selected_primary_model",
+    ]
+    left = phase4_df[compare_columns].sort_values("model_name").reset_index(drop=True)
+    right = phase6_df[compare_columns].sort_values("model_name").reset_index(drop=True)
+    return left.equals(right)
 
 
 def build_model_table(phase4_df: pd.DataFrame, phase6_df: pd.DataFrame) -> list[str]:
@@ -108,6 +122,7 @@ def build_model_table(phase4_df: pd.DataFrame, phase6_df: pd.DataFrame) -> list[
 def build_report_md(phase4_df: pd.DataFrame, phase6_df: pd.DataFrame, phase4_stats: dict, phase6_stats: dict) -> str:
     phase4_best = get_selected_row(phase4_df)
     phase6_best = get_selected_row(phase6_df)
+    exact_match = benchmarks_match(phase4_df, phase6_df)
     lines = [
         "# Event Panel V2 SEC Sentiment V1 Benchmark",
         "",
@@ -120,15 +135,16 @@ def build_report_md(phase4_df: pd.DataFrame, phase6_df: pd.DataFrame, phase4_sta
         "",
         "## Important Note",
         "",
-        "- The selected SEC filing sentiment artifact was already embedded in the locked `event_panel_v2` Phase 4 anchor.",
-        "- This Phase 6 run is therefore a reproducibility and explicit documentation pass for that existing dataset path, not a truly new incremental additive signal test.",
+        f"- Current benchmark match to the canonical enriched `event_panel_v2` result: `{'exact' if exact_match else 'different'}`.",
+        f"- Selected model comparison: Phase 4 `{phase4_best['model_name']}` vs Phase 6 `{phase6_best['model_name']}`. Best CV AUC `{format_metric(phase4_best['cv_auc_mean'])}` vs `{format_metric(phase6_best['cv_auc_mean'])}`. Best holdout AUC `{format_metric(phase4_best['holdout_auc'])}` vs `{format_metric(phase6_best['holdout_auc'])}`.",
+        "- Treat this phase as a reproducibility check for the SEC sentiment path, not as the primary benchmark unless it materially outperforms the canonical enriched run.",
         "",
         "## Panel Comparison",
         "",
-        "| Panel | Rows | Tickers | Feature Count | Selected Model |",
+        "| Panel | Rows | Tickers | Panel Columns | Selected Model |",
         "|---|---:|---:|---:|---|",
-        f"| Phase 4 anchor | {phase4_stats['rows']:,} | {phase4_stats['tickers']:,} | {phase4_stats['feature_count']:,} | {phase4_best['model_name']} |",
-        f"| Phase 6 sec sentiment v1 | {phase6_stats['rows']:,} | {phase6_stats['tickers']:,} | {phase6_stats['feature_count']:,} | {phase6_best['model_name']} |",
+        f"| Phase 4 anchor | {phase4_stats['rows']:,} | {phase4_stats['tickers']:,} | {phase4_stats['column_count']:,} | {phase4_best['model_name']} |",
+        f"| Phase 6 sec sentiment v1 | {phase6_stats['rows']:,} | {phase6_stats['tickers']:,} | {phase6_stats['column_count']:,} | {phase6_best['model_name']} |",
         "",
         "## Per-Model Comparison",
         "",
@@ -141,6 +157,7 @@ def build_report_md(phase4_df: pd.DataFrame, phase6_df: pd.DataFrame, phase4_sta
 def build_decision_doc(phase4_df: pd.DataFrame, phase6_df: pd.DataFrame, phase4_stats: dict, phase6_stats: dict) -> str:
     phase4_best = get_selected_row(phase4_df)
     phase6_best = get_selected_row(phase6_df)
+    exact_match = benchmarks_match(phase4_df, phase6_df)
     decision = "FREEZE"
     lines = [
         "# Phase 6 SEC Sentiment Test V1",
@@ -153,13 +170,14 @@ def build_decision_doc(phase4_df: pd.DataFrame, phase6_df: pd.DataFrame, phase4_
         "",
         "## Structural Finding",
         "",
-        "- The locked `event_panel_v2` Phase 4 anchor already contains the SEC filing sentiment feature columns at full coverage.",
-        "- As a result, this Phase 6 panel is not a new additive merge in practice; it is an explicit rerun and freeze-point for the already-embedded SEC sentiment path.",
+        f"- Benchmark parity with the canonical enriched `event_panel_v2` artifact: `{'exact_match' if exact_match else 'different_result'}`.",
+        f"- Stored panel column comparison: Phase 4 `{phase4_stats['column_count']:,}` vs Phase 6 `{phase6_stats['column_count']:,}`. Sentiment-column count in Phase 6 panel: `{len(phase6_stats['sentiment_columns'])}`.",
+        "- This phase should be read as a documented SEC sentiment path check against the canonical enriched benchmark, not as a separate promoted anchor by default.",
         "",
         "## Comparison Against Phase 4 Anchor",
         "",
         f"- Row count: Phase 4 `{phase4_stats['rows']:,}` vs Phase 6 `{phase6_stats['rows']:,}`",
-        f"- Feature count: Phase 4 `{phase4_stats['feature_count']:,}` vs Phase 6 `{phase6_stats['feature_count']:,}`",
+        f"- Stored panel columns: Phase 4 `{phase4_stats['column_count']:,}` vs Phase 6 `{phase6_stats['column_count']:,}`",
         f"- Selected primary model: Phase 4 `{phase4_best['model_name']}` vs Phase 6 `{phase6_best['model_name']}`",
         f"- Best CV AUC: Phase 4 `{format_metric(phase4_best['cv_auc_mean'])}` vs Phase 6 `{format_metric(phase6_best['cv_auc_mean'])}`",
         f"- Best holdout AUC: Phase 4 `{format_metric(phase4_best['holdout_auc'])}` vs Phase 6 `{format_metric(phase6_best['holdout_auc'])}`",
@@ -167,9 +185,13 @@ def build_decision_doc(phase4_df: pd.DataFrame, phase6_df: pd.DataFrame, phase4_
         "## Decision",
         "",
         f"- Final decision: **{decision}**",
-        "- Rationale: SEC filing sentiment is not newly improving the locked benchmark here because it was already present in the baseline panel. Keep the code and artifacts for reference, but do not treat this phase as proof of a new additive lift.",
-        "- Promotion status: do not promote as a separate new dataset layer from this Phase 6 run.",
-        "- Rejection status: do not reject the sentiment path outright either, because the path is already part of the event-panel baseline and remains timing-safe.",
+        (
+            "- Rationale: the Phase 6 benchmark currently matches the canonical enriched benchmark exactly, so it serves as a reproducibility confirmation rather than evidence for a new promoted layer."
+            if exact_match
+            else "- Rationale: the Phase 6 benchmark differs from the canonical enriched benchmark, but it does not replace the current anchor on the present artifacts."
+        ),
+        "- Promotion status: keep the canonical enriched `event_panel_v2` benchmark as the main anchor.",
+        "- Rejection status: keep the SEC sentiment path documented and timing-safe, but do not present this report as a separate benchmark win.",
         "",
     ]
     return "\n".join(lines) + "\n"

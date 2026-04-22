@@ -8,21 +8,22 @@
 
 ## Structural Finding
 
-- The locked `event_panel_v2` Phase 4 anchor already contains the SEC filing sentiment feature columns at full coverage.
-- As a result, this Phase 6 panel is not a new additive merge in practice; it is an explicit rerun and freeze-point for the already-embedded SEC sentiment path.
+- Benchmark parity with the canonical enriched `event_panel_v2` artifact: `exact_match`.
+- Stored panel column comparison: Phase 4 `78` vs Phase 6 `72`. Sentiment-column count in Phase 6 panel: `13`.
+- This phase should be read as a documented SEC sentiment path check against the canonical enriched benchmark, not as a separate promoted anchor by default.
 
 ## Comparison Against Phase 4 Anchor
 
 - Row count: Phase 4 `1,109` vs Phase 6 `1,109`
-- Feature count: Phase 4 `72` vs Phase 6 `72`
-- Selected primary model: Phase 4 `random_forest` vs Phase 6 `random_forest`
-- Best CV AUC: Phase 4 `0.5260` vs Phase 6 `0.5260`
-- Best holdout AUC: Phase 4 `0.5237` vs Phase 6 `0.5237`
+- Stored panel columns: Phase 4 `78` vs Phase 6 `72`
+- Selected primary model: Phase 4 `xgboost` vs Phase 6 `xgboost`
+- Best CV AUC: Phase 4 `0.5415` vs Phase 6 `0.5415`
+- Best holdout AUC: Phase 4 `0.5388` vs Phase 6 `0.5388`
 
 ## Decision
 
 - Final decision: **FREEZE**
-- Rationale: SEC filing sentiment is not newly improving the locked benchmark here because it was already present in the baseline panel. Keep the code and artifacts for reference, but do not treat this phase as proof of a new additive lift.
-- Promotion status: do not promote as a separate new dataset layer from this Phase 6 run.
-- Rejection status: do not reject the sentiment path outright either, because the path is already part of the event-panel baseline and remains timing-safe.
+- Rationale: the Phase 6 benchmark currently matches the canonical enriched benchmark exactly, so it serves as a reproducibility confirmation rather than evidence for a new promoted layer.
+- Promotion status: keep the canonical enriched `event_panel_v2` benchmark as the main anchor.
+- Rejection status: keep the SEC sentiment path documented and timing-safe, but do not present this report as a separate benchmark win.
 

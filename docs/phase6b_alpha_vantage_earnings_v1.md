@@ -45,9 +45,11 @@
 
 ## Results
 
-- Baseline selected model: `random_forest` with CV AUC `0.5260` and holdout AUC `0.5237`.
-- Alpha Vantage selected model: `xgboost` with CV AUC `0.5233` and holdout AUC `0.5774`.
-- The additive benchmark exactly matched baseline because all Alpha Vantage columns were excluded by the existing missingness filter at the current partial-coverage state.
+- Baseline selected model: `xgboost` with CV AUC `0.5415` and holdout AUC `0.5388`.
+- Alpha Vantage selected model: `xgboost` with CV AUC `0.5262` and holdout AUC `0.5580`.
+- Benchmark equality state versus the canonical enriched anchor: `different`.
+- Selected-row delta versus the canonical enriched anchor: CV AUC `-0.0154`, holdout AUC `+0.0192`.
+- Interpretation: the Alpha Vantage block changed the benchmark outcome. On the current artifacts it lowers selected-model CV AUC but raises selected-model holdout AUC, so the result is mixed rather than identical to baseline.
 
 ## Recommendation
 
@@ -55,4 +57,4 @@
 - `PROMOTE` means the additive block improved the locked benchmark cleanly enough to carry forward.
 - `FREEZE` means the ingest and merge are kept for reference, but the dataset is not yet strong enough to promote.
 - `REJECT` would be reserved for a structurally impractical or leakage-unsafe dataset path.
-- Current result: keep the Phase 4 anchor as the primary setup and treat Alpha Vantage earnings data as a tested but not-yet-promoted additive layer.
+- Current result: keep the canonical enriched `event_panel_v2` benchmark as the primary setup and treat Alpha Vantage earnings data as a tested but not-yet-promoted additive layer.
