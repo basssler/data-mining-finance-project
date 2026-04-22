@@ -41,6 +41,7 @@ from src.label_comparison_event_v2 import (
     fit_model,
     format_metric,
     load_event_panel,
+    resolve_max_missingness_pct,
     safe_rank_ic,
     select_usable_features,
     summarize_metric_dicts,
@@ -116,6 +117,7 @@ def run_model_matrix(
     min_train_dates: int,
     threshold: float,
     panel_name: str,
+    max_missingness_pct: float = 20.0,
 ) -> tuple[pd.DataFrame, dict]:
     split_payload = make_event_v1_splits(
         df=panel_df,
@@ -153,6 +155,7 @@ def run_model_matrix(
             usable_features, missingness_by_feature, dropped_missing, dropped_constant = select_usable_features(
                 train_active,
                 kept_global,
+                max_missingness_pct=max_missingness_pct,
             )
             clipped_train, clipped_validation = clip_outliers(train_active, validation_active, usable_features)
             fitted_model, _ = fit_model(
@@ -175,6 +178,7 @@ def run_model_matrix(
         holdout_usable, _, holdout_dropped_missing, holdout_dropped_constant = select_usable_features(
             holdout_train_active,
             kept_global,
+            max_missingness_pct=max_missingness_pct,
         )
         clipped_train, clipped_holdout = clip_outliers(holdout_train_active, holdout_active, holdout_usable)
         fitted_model, backend = fit_model(
@@ -245,6 +249,7 @@ def export_selected_model_shap(
     selected_model_name: str,
     shap_plot_path: Path,
     shap_csv_path: Path,
+    max_missingness_pct: float = 20.0,
 ) -> dict | None:
     if selected_model_name != "xgboost":
         return None
@@ -277,7 +282,11 @@ def export_selected_model_shap(
     holdout_full = panel_df.iloc[split_payload["holdout"]["holdout_indices"]].copy()
     holdout_train_active, _ = apply_variant_label_mode(holdout_train_full, variant)
     holdout_active, _ = apply_variant_label_mode(holdout_full, variant)
-    holdout_usable, _, _, _ = select_usable_features(holdout_train_active, kept_global)
+    holdout_usable, _, _, _ = select_usable_features(
+        holdout_train_active,
+        kept_global,
+        max_missingness_pct=max_missingness_pct,
+    )
     clipped_train, clipped_holdout = clip_outliers(holdout_train_active, holdout_active, holdout_usable)
     fitted_model, backend = fit_model(
         selected_model_name,
@@ -450,6 +459,7 @@ def main() -> None:
         min_train_dates=int(config["cv"]["min_train_dates"]),
         threshold=0.5,
         panel_name=panel_name,
+        max_missingness_pct=resolve_max_missingness_pct(config.get("feature_exclusions")),
     )
 
     print(f"Saving benchmark CSV to: {csv_path}")
@@ -472,6 +482,7 @@ def main() -> None:
         selected_model_name=str(summary["best_model_name"]),
         shap_plot_path=shap_plot_path,
         shap_csv_path=shap_csv_path,
+        max_missingness_pct=resolve_max_missingness_pct(config.get("feature_exclusions")),
     )
 
     best_row = result_df.loc[result_df["is_selected_primary_model"]].iloc[0]

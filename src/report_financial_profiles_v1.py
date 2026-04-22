@@ -30,6 +30,7 @@ from src.label_comparison_event_v2 import (
     fit_model,
     format_metric,
     load_event_panel,
+    resolve_max_missingness_pct,
     select_usable_features,
     summarize_metric_dicts,
 )
@@ -252,6 +253,7 @@ def run_segment_model_matrix(
     n_splits: int,
     embargo_days: int,
     min_train_dates: int,
+    max_missingness_pct: float = 20.0,
 ) -> pd.DataFrame:
     split_payload = make_event_v1_splits(
         df=panel_df,
@@ -290,6 +292,7 @@ def run_segment_model_matrix(
             usable_features, _, dropped_missing, dropped_constant = select_usable_features(
                 train_active,
                 kept_global,
+                max_missingness_pct=max_missingness_pct,
             )
             clipped_train, clipped_validation = clip_outliers(
                 train_active,
@@ -322,6 +325,7 @@ def run_segment_model_matrix(
         holdout_usable, _, holdout_dropped_missing, holdout_dropped_constant = select_usable_features(
             holdout_train_active,
             kept_global,
+            max_missingness_pct=max_missingness_pct,
         )
         clipped_train, clipped_holdout = clip_outliers(
             holdout_train_active,
@@ -418,6 +422,7 @@ def build_segment_benchmark(
                 int(config["cv"]["min_train_dates"]),
                 max(40, int(segment_df["date"].nunique() * 0.5)),
             ),
+            max_missingness_pct=resolve_max_missingness_pct(config.get("feature_exclusions")),
         )
         if segment_result_df.empty:
             skips.append(

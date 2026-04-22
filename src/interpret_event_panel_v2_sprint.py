@@ -35,6 +35,7 @@ from src.label_comparison_event_v2 import (
     compute_global_feature_exclusions,
     fit_model,
     load_event_panel,
+    resolve_max_missingness_pct,
     safe_rank_ic,
     select_usable_features,
 )
@@ -359,7 +360,11 @@ def fit_selected_model_for_holdout(
     holdout_full = labeled_panel_df.iloc[split_payload["holdout"]["holdout_indices"]].copy()
     holdout_train_active, _ = apply_variant_label_mode(holdout_train_full, variant)
     holdout_active, _ = apply_variant_label_mode(holdout_full, variant)
-    holdout_usable, _, _, _ = select_usable_features(holdout_train_active, kept_global)
+    holdout_usable, _, _, _ = select_usable_features(
+        holdout_train_active,
+        kept_global,
+        max_missingness_pct=resolve_max_missingness_pct(config.get("feature_exclusions")),
+    )
     clipped_train, clipped_holdout = clip_outliers(holdout_train_active, holdout_active, holdout_usable)
     fitted_model, backend = fit_model(
         selected_model_name,
@@ -449,7 +454,11 @@ def run_family_ablation(
             validation_full = labeled_panel_df.iloc[fold["validation_indices"]].copy()
             train_active, _ = apply_variant_label_mode(train_full, variant)
             validation_active, _ = apply_variant_label_mode(validation_full, variant)
-            usable_features, _, _, _ = select_usable_features(train_active, candidate_features)
+            usable_features, _, _, _ = select_usable_features(
+                train_active,
+                candidate_features,
+                max_missingness_pct=resolve_max_missingness_pct(config.get("feature_exclusions")),
+            )
             clipped_train, clipped_validation = clip_outliers(train_active, validation_active, usable_features)
             fitted_model, _ = fit_model(
                 selected_model_name,
@@ -779,7 +788,11 @@ def run_fold_stability(
         validation_full = labeled_panel_df.iloc[fold["validation_indices"]].copy()
         train_active, _ = apply_variant_label_mode(train_full, variant)
         validation_active, _ = apply_variant_label_mode(validation_full, variant)
-        usable_features, _, _, _ = select_usable_features(train_active, kept_global)
+        usable_features, _, _, _ = select_usable_features(
+            train_active,
+            kept_global,
+            max_missingness_pct=resolve_max_missingness_pct(config.get("feature_exclusions")),
+        )
         clipped_train, clipped_validation = clip_outliers(train_active, validation_active, usable_features)
         fitted_model, _ = fit_model(
             selected_model_name,

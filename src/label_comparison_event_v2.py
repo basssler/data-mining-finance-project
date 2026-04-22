@@ -47,6 +47,7 @@ from src.panel_builder_event_v2 import (
     SENTIMENT_CONTEXT_COLUMNS,
 )
 from src.paths import DOCS_DIR
+from src.universe import get_project_sector_map
 from src.validation_event_v1 import make_event_v1_splits
 
 LABEL_COMPARISON_DOC_PATH = DOCS_DIR / "label_comparison_v1.md"
@@ -106,6 +107,19 @@ def _compute_stock_forward_return(df: pd.DataFrame, horizon_days: int) -> pd.Ser
     return (future_price / df["adj_close"]) - 1.0
 
 
+def _resolve_sector_series(tickers: pd.Series) -> pd.Series:
+    sector_map = get_project_sector_map()
+    normalized = tickers.astype("string").str.strip().str.upper()
+    sectors = normalized.map(sector_map)
+    missing_tickers = sorted(normalized.loc[sectors.isna()].dropna().unique().tolist())
+    if missing_tickers:
+        raise ValueError(
+            "sector_equal_weight_ex_self requires a local sector mapping for every ticker. "
+            f"Missing sectors for: {', '.join(missing_tickers)}"
+        )
+    return sectors.astype("string")
+
+
 def build_daily_label_table(
     prices_df: pd.DataFrame,
     horizon_days: int,
@@ -119,9 +133,14 @@ def build_daily_label_table(
         raise ValueError(f"Unsupported benchmark_mode: {benchmark_mode}")
     labels_df = prices_df.copy()
     labels_df["forward_return"] = _compute_stock_forward_return(labels_df, horizon_days=horizon_days)
+    if benchmark_mode == "sector_equal_weight_ex_self":
+        labels_df["sector"] = _resolve_sector_series(labels_df["ticker"])
+        benchmark_group_keys = pd.MultiIndex.from_frame(labels_df[["date", "sector"]])
+    else:
+        benchmark_group_keys = labels_df["date"]
     labels_df["benchmark_forward_return"] = _build_leave_one_out_mean(
         labels_df["forward_return"],
-        labels_df["date"],
+        benchmark_group_keys,
     )
     labels_df["excess_forward_return"] = (
         labels_df["forward_return"] - labels_df["benchmark_forward_return"]
@@ -222,6 +241,7 @@ def clip_outliers(
 def select_usable_features(
     train_df: pd.DataFrame,
     candidate_columns: list[str],
+    max_missingness_pct: float = DEFAULT_MAX_MISSINGNESS_PCT,
 ) -> tuple[list[str], dict[str, float], list[str], list[str]]:
     usable_features = []
     missingness_by_feature = {}
@@ -230,7 +250,7 @@ def select_usable_features(
     for column in candidate_columns:
         missing_pct = float(train_df[column].isna().mean() * 100.0)
         missingness_by_feature[column] = missing_pct
-        if train_df[column].notna().sum() == 0 or missing_pct > DEFAULT_MAX_MISSINGNESS_PCT:
+        if train_df[column].notna().sum() == 0 or missing_pct > float(max_missingness_pct):
             dropped_for_missingness.append(column)
             continue
         if train_df[column].dropna().nunique() <= 1:
@@ -240,6 +260,14 @@ def select_usable_features(
     if not usable_features:
         raise ValueError("No usable feature columns remained after filtering.")
     return usable_features, missingness_by_feature, dropped_for_missingness, dropped_for_constant
+
+
+def resolve_max_missingness_pct(feature_exclusions: dict | None = None) -> float:
+    """Return the configured missingness threshold, defaulting for legacy callers."""
+    if feature_exclusions is None:
+        return DEFAULT_MAX_MISSINGNESS_PCT
+    value = feature_exclusions.get("max_missingness_pct", DEFAULT_MAX_MISSINGNESS_PCT)
+    return float(value)
 
 
 def build_logistic_pipeline() -> Pipeline:

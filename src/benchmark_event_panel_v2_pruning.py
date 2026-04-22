@@ -24,6 +24,7 @@ from src.label_comparison_event_v2 import (
     evaluate_extended,
     fit_model,
     format_metric,
+    resolve_max_missingness_pct,
     select_usable_features,
     summarize_metric_dicts,
 )
@@ -166,6 +167,7 @@ def evaluate_regime(
     embargo_days: int,
     min_train_dates: int,
     model_name: str,
+    max_missingness_pct: float = 20.0,
 ) -> dict:
     split_payload = make_event_v1_splits(
         df=panel_df,
@@ -200,6 +202,7 @@ def evaluate_regime(
         usable_features, missingness_by_feature, dropped_missing, dropped_constant = select_usable_features(
             train_active,
             kept_global,
+            max_missingness_pct=max_missingness_pct,
         )
         clipped_train, clipped_validation = clip_outliers(train_active, validation_active, usable_features)
         fitted_model, _ = fit_model(
@@ -236,6 +239,7 @@ def evaluate_regime(
     holdout_usable, _, holdout_dropped_missing, holdout_dropped_constant = select_usable_features(
         holdout_train_active,
         kept_global,
+        max_missingness_pct=max_missingness_pct,
     )
     clipped_train, clipped_holdout = clip_outliers(holdout_train_active, holdout_active, holdout_usable)
     fitted_model, backend = fit_model(
@@ -441,7 +445,12 @@ def main() -> None:
     )
     holdout_train_full = labeled_panel_df.iloc[split_payload["holdout"]["train_indices"]].copy()
     holdout_train_active, _ = apply_variant_label_mode(holdout_train_full, variant)
-    full_usable_features, _, _, _ = select_usable_features(holdout_train_active, kept_global)
+    configured_max_missingness_pct = resolve_max_missingness_pct(config.get("feature_exclusions"))
+    full_usable_features, _, _, _ = select_usable_features(
+        holdout_train_active,
+        kept_global,
+        max_missingness_pct=configured_max_missingness_pct,
+    )
 
     regime_map = build_regime_map(full_usable_features, Path(args.shap_csv))
     rows = []
@@ -458,6 +467,7 @@ def main() -> None:
                 embargo_days=int(config["cv"]["embargo_days"]),
                 min_train_dates=int(config["cv"]["min_train_dates"]),
                 model_name=model_name,
+                max_missingness_pct=configured_max_missingness_pct,
             )
         )
 

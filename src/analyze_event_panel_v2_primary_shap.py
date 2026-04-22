@@ -28,6 +28,7 @@ from src.label_comparison_event_v2 import (
     fit_model,
     format_metric,
     load_event_panel,
+    resolve_max_missingness_pct,
     safe_rank_ic,
     select_usable_features,
 )
@@ -120,6 +121,7 @@ def get_holdout_training_frames(
     holdout_usable, missingness_by_feature, dropped_missing, dropped_constant = select_usable_features(
         holdout_train_active,
         kept_global,
+        max_missingness_pct=resolve_max_missingness_pct(config.get("feature_exclusions")),
     )
     clipped_train, clipped_holdout = clip_outliers(holdout_train_active, holdout_active, holdout_usable)
     return {
