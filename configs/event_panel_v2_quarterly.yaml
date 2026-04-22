@@ -1,10 +1,10 @@
 panel:
   path: data/interim/event_panel_v2.parquet
-  name: event_panel_v2
+  name: event_panel_v2_quarterly
 
 label:
-  variant_name: event_v2_5d_sign
-  horizon_days: 5
+  variant_name: event_v2_63d_sign
+  horizon_days: 63
   mode: sign
   benchmark_mode: sector_equal_weight_ex_self
 
@@ -41,11 +41,11 @@ random_seed:
   xgboost: 42
 
 metadata:
-  report_title: Event Panel V2 Primary Benchmark
-  label_description: 5-trading-day excess return sign
+  report_title: Event Panel V2 Quarterly Benchmark
+  label_description: 63-trading-day excess return sign
 
 outputs:
-  csv: reports/results/event_panel_v2_primary_benchmark.csv
-  markdown: reports/results/event_panel_v2_primary_benchmark.md
-  shap_plot: reports/results/event_panel_v2_primary_shap_summary.png
-  shap_csv: reports/results/event_panel_v2_primary_shap_importance.csv
+  csv: reports/results/event_panel_v2_quarterly_benchmark.csv
+  markdown: reports/results/event_panel_v2_quarterly_benchmark.md
+  shap_plot: reports/results/event_panel_v2_quarterly_shap_summary.png
+  shap_csv: reports/results/event_panel_v2_quarterly_shap_importance.csv

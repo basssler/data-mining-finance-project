@@ -2,6 +2,12 @@
 
 This document turns the event-panel redesign plan into an implementation workflow you can actually run inside the repo.
 
+Current repo scope now includes two benchmark lanes on top of the same `event_panel_v2` foundation:
+- the original locked 5-trading-day excess-return-sign lane that remains the historical primary in the existing lock and decision docs
+- an additive quarterly 63-trading-day excess-return-sign lane with its own config and outputs
+
+This workflow document should treat the quarterly lane as an extension of the event-panel benchmark surface, not as a rewrite of the earlier promotion history.
+
 The workflow is based on six phases:
 1. leakage and timestamp audit
 2. event-based panel rebuild
@@ -308,6 +314,11 @@ Stop model churn and test the redesigned data with only the three anchor models.
 - one fixed training config for event panel v2
 - benchmark result table across label variants
 
+### Current additive scope
+- Keep the original 5-trading-day lane as the historical anchor for the existing lock docs.
+- Allow parallel configs that reuse the same `event_panel_v2` base when they represent separate benchmark lanes rather than a replacement benchmark.
+- The current example is the quarterly 63-trading-day excess-return-sign lane in `configs/event_panel_v2_quarterly.yaml`.
+
 ### Suggested files
 - `src/train_event_v2.py`
 - `configs/event_v2_training.yaml` or similar if you use config files
@@ -498,6 +509,8 @@ If 21-day materially beats 5-day, consider reframing the thesis around post-even
 ### After Phase 4
 If the redesigned event panel still shows no lift with frozen methods, do not add more algorithms.
 
+If a quarterly lane is run, evaluate it as a parallel benchmark track with separate outputs rather than back-editing the earlier 5-day lock history.
+
 ### After Phase 5
 If expanding the universe does not help, scale was not the main bottleneck.
 
@@ -515,4 +528,3 @@ The workflow is:
 Not:
 
 **one giant prompt -> many moving parts -> unclear causality**
-

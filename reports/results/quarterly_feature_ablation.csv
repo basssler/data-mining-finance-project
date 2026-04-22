@@ -1,0 +1,4 @@
+regime_name,added_exclusions,model_name,cv_auc_mean,cv_log_loss_mean,holdout_auc,holdout_log_loss,top_shap_feature,holdout_auc_delta_vs_reference
+drop_top_shap_feature,"[""qfd_av_revision_x_surprise""]",xgboost,0.5146599376335412,0.7843711281019046,0.48757016840417,0.7894043593307285,qfd_av_latest_surprise_vs_trailing_pct,0.0665597433841219
+drop_top_3_shap_features,"[""qfd_av_revision_x_surprise"", ""qfd_av_latest_surprise_vs_trailing_pct"", ""av_trailing_4q_eps_surprise_pct_std""]",logistic_regression,0.5122712269088916,0.7692173770755303,0.4727345629510826,0.7644677332041052,n/a,0.05172413793103453
+full_reference,[],xgboost,0.5110620540356576,0.7849633678778634,0.4210104250200481,0.8218281615639302,qfd_av_revision_x_surprise,0.0

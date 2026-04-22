@@ -105,6 +105,47 @@ def resolve_shap_output_paths(config: dict) -> tuple[Path, Path]:
     return shap_plot, shap_csv
 
 
+def build_default_label_description(label_config: dict) -> str:
+    horizon_days = int(label_config["horizon_days"])
+    label_mode = str(label_config["mode"])
+    if label_mode == "sign":
+        return f"{horizon_days}-trading-day excess return sign"
+    if label_mode == "quantile":
+        return f"{horizon_days}-trading-day excess return quantile"
+    return f"{horizon_days}-trading-day {label_mode} label"
+
+
+def resolve_report_metadata(config: dict) -> dict[str, str]:
+    metadata = config.get("metadata", {})
+    panel_name = str(config.get("panel", {}).get("name", "event_panel_v2"))
+    panel_display_name = str(metadata.get("panel_display_name", panel_name))
+    label_description = str(
+        metadata.get("label_description", build_default_label_description(config["label"]))
+    )
+    report_title = str(metadata.get("report_title", f"{panel_display_name} Benchmark"))
+    setup_note = str(
+        metadata.get(
+            "setup_note",
+            "This report is the new post-fix anchor to use before universe expansion.",
+        )
+    )
+    interpretation_note = str(
+        metadata.get(
+            "interpretation_note",
+            "The redesigned setup is directionally better than the old daily research path, "
+            "but the edge is still modest. This should be treated as a cleaner anchor, not as proof that the problem is solved.",
+        )
+    )
+    return {
+        "panel_name": panel_name,
+        "panel_display_name": panel_display_name,
+        "label_description": label_description,
+        "report_title": report_title,
+        "setup_note": setup_note,
+        "interpretation_note": interpretation_note,
+    }
+
+
 def run_model_matrix(
     panel_df: pd.DataFrame,
     variant: VariantSpec,
@@ -343,18 +384,23 @@ def export_selected_model_shap(
     }
 
 
-def build_markdown_report(result_df: pd.DataFrame, summary: dict, old_baseline: dict | None) -> str:
+def build_markdown_report(
+    result_df: pd.DataFrame,
+    summary: dict,
+    old_baseline: dict | None,
+    report_metadata: dict[str, str],
+) -> str:
     best_row = result_df.loc[result_df["is_selected_primary_model"]].iloc[0]
     lines = [
-        "# Event Panel V2 Primary Benchmark",
+        f"# {report_metadata['report_title']}",
         "",
         "## Locked Setup",
         "",
-        "- Primary panel: `event_panel_v2`",
-        "- Primary label: `5-trading-day excess return sign`",
+        f"- Primary panel: `{report_metadata['panel_display_name']}`",
+        f"- Primary label: `{report_metadata['label_description']}`",
         "- Models: `logistic_regression`, `random_forest`, `xgboost`",
         "- 2024 holdout policy: unchanged",
-        "- This report is the new post-fix anchor to use before universe expansion.",
+        f"- {report_metadata['setup_note']}",
         "",
         "## Per-Model Results",
         "",
@@ -407,9 +453,7 @@ def build_markdown_report(result_df: pd.DataFrame, summary: dict, old_baseline: 
             f"the redesigned event setup improves best CV AUC from `{format_metric(old_baseline['cv_auc'])}` to `{format_metric(best_row['cv_auc_mean'])}` "
             f"and best holdout AUC from `{format_metric(old_baseline['holdout_auc'])}` to `{format_metric(best_row['holdout_auc'])}`."
         )
-    lines.append(
-        "- The redesigned setup is directionally better than the old daily research path, but the edge is still modest. This should be treated as a cleaner anchor, not as proof that the problem is solved."
-    )
+    lines.append(f"- {report_metadata['interpretation_note']}")
     if str(result_df.loc[result_df["model_name"] == "xgboost", "xgboost_backend"].iloc[0]) == "cpu":
         lines.append(
             "- XGBoost ran on CPU in this benchmark because the local stack does not support clean CUDA prediction without the device-mismatch warning."
@@ -421,6 +465,7 @@ def main() -> None:
     args = parse_args()
     config = load_config(Path(args.config))
     set_random_seeds(config.get("random_seed", {}))
+    report_metadata = resolve_report_metadata(config)
 
     panel_path = Path(config["panel"]["path"])
     csv_path = Path(config["outputs"]["csv"])
@@ -466,7 +511,7 @@ def main() -> None:
     result_df.to_csv(csv_path, index=False)
 
     old_baseline = load_old_baseline()
-    markdown = build_markdown_report(result_df, summary, old_baseline)
+    markdown = build_markdown_report(result_df, summary, old_baseline, report_metadata)
     print(f"Saving benchmark Markdown to: {markdown_path}")
     markdown_path.write_text(markdown, encoding="utf-8")
 

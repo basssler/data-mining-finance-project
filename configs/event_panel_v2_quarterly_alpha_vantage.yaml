@@ -1,0 +1,73 @@
+panel:
+  path: data/interim/event_panel_v2_phase6b_alpha_vantage.parquet
+  name: event_panel_v2_quarterly_alpha_vantage
+
+prices:
+  path: data/interim/prices/prices_with_labels.parquet
+
+label:
+  variant_name: event_v2_63d_sign
+  horizon_days: 63
+  mode: sign
+  benchmark_mode: sector_equal_weight_ex_self
+
+holdout:
+  start: "2024-01-01"
+
+cv:
+  n_splits: 5
+  embargo_days: 5
+  min_train_dates: 252
+
+models:
+  - logistic_regression
+  - random_forest
+  - xgboost
+
+feature_inclusions:
+  additional:
+    - av_latest_prior_eps_surprise_before_event
+    - av_latest_prior_eps_surprise_pct_before_event
+    - av_trailing_4q_eps_surprise_mean
+    - av_trailing_4q_eps_surprise_std
+    - av_trailing_4q_eps_surprise_pct_mean
+    - av_trailing_4q_eps_surprise_pct_std
+    - av_trailing_4q_eps_beat_rate
+    - av_days_since_last_earnings_release
+    - av_latest_quarterly_eps_estimate_before_event
+    - av_latest_quarterly_revenue_estimate_before_event
+    - av_eps_estimate_analyst_count_before_event
+    - av_revenue_estimate_analyst_count_before_event
+    - av_eps_estimate_revision_30d
+    - av_eps_estimate_revision_90d
+
+feature_exclusions:
+  explicit:
+    - gross_margin
+    - current_filing_sentiment_available
+  auto_drop_all_missing: true
+  auto_drop_constant: true
+  max_missingness_pct: 20.0
+
+xgboost:
+  prefer_gpu_if_clean: true
+  fallback_to_cpu: true
+  note: "GPU is used only when the local stack supports clean CUDA prediction without the device-mismatch warning."
+
+random_seed:
+  python: 42
+  numpy: 42
+  sklearn: 42
+  xgboost: 42
+
+metadata:
+  report_title: Event Panel V2 Quarterly Alpha Vantage Benchmark
+  label_description: 63-trading-day excess return sign
+  setup_note: This report is a parallel quarterly experiment on the Alpha Vantage earnings-enriched panel, not a replacement for the 5-day anchor.
+  interpretation_note: Adding prior-quarter surprise and estimate-revision features improves the quarterly holdout versus the base 63-day lane, but the result still trails the historical 5-day anchor and should be treated as a research comparison rather than a promoted default.
+
+outputs:
+  csv: reports/results/event_panel_v2_quarterly_alpha_vantage_benchmark.csv
+  markdown: reports/results/event_panel_v2_quarterly_alpha_vantage_benchmark.md
+  shap_plot: reports/results/event_panel_v2_quarterly_alpha_vantage_shap_summary.png
+  shap_csv: reports/results/event_panel_v2_quarterly_alpha_vantage_shap_importance.csv
