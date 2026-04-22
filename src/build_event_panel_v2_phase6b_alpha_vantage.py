@@ -31,6 +31,10 @@ from src.alpha_vantage_earnings_phase6b import (
     save_normalized_tables,
 )
 from src.config_event_v1 import PRICE_INPUT_PATH
+from src.event_panel_v2_schema import (
+    assert_matches_canonical_base_contract,
+    order_columns_with_canonical_base_first,
+)
 from src.label_comparison_event_v2 import load_event_panel
 from src.labels_event_v1 import load_price_data, normalize_price_data
 from src.paths import INTERIM_DATA_DIR
@@ -127,6 +131,11 @@ def main() -> None:
 
     print(f"\nLoading locked base panel from: {panel_path}")
     panel_df = load_event_panel(panel_path)
+    panel_df = panel_df.drop(columns=["date"], errors="ignore")
+    canonical_columns = assert_matches_canonical_base_contract(
+        panel_df,
+        panel_name="event_panel_v2_phase6b_alpha_vantage input panel",
+    )
     print(f"Loading prices from: {prices_path}")
     prices_df = normalize_price_data(load_price_data(prices_path))
 
@@ -136,7 +145,16 @@ def main() -> None:
     print(f"Saved Phase 6B Alpha Vantage feature block to: {feature_path}")
     summarize_features(feature_df, diagnostics)
 
-    merged_panel = merge_feature_block_onto_panel(panel_df, feature_df)
+    merge_columns = ["ticker", "event_date", "source_id"] + [
+        column for column in feature_df.columns if column.startswith("av_")
+    ]
+    merged_panel = merge_feature_block_onto_panel(panel_df, feature_df[merge_columns].copy())
+    assert_matches_canonical_base_contract(
+        merged_panel,
+        panel_name="event_panel_v2_phase6b_alpha_vantage merged panel",
+        allowed_extra_prefixes=("av_",),
+    )
+    merged_panel = order_columns_with_canonical_base_first(merged_panel, canonical_columns=canonical_columns)
     ensure_parent_dir(output_path)
     merged_panel.to_parquet(output_path, index=False)
     print(f"\nSaved merged Phase 6B panel to: {output_path}")

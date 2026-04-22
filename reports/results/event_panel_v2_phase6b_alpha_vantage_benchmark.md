@@ -1,31 +1,37 @@
-# Event Panel V2 Phase 6B Alpha Vantage Benchmark
+# Event Panel V2 Primary Benchmark
 
-## Scope
+## Locked Setup
 
-- Locked baseline preserved: `event_panel_v2`, 34 tickers, 5-trading-day excess return sign, 2024 holdout unchanged.
-- One additive external dataset family only: Alpha Vantage earnings estimates/outcomes.
-- Models unchanged: logistic regression, random forest, XGBoost.
-- Manifest completion state: `{'complete': 68}`.
+- Primary panel: `event_panel_v2`
+- Primary label: `5-trading-day excess return sign`
+- Models: `logistic_regression`, `random_forest`, `xgboost`
+- 2024 holdout policy: unchanged
+- This report is the new post-fix anchor to use before universe expansion.
 
-## Panel Summary
+## Per-Model Results
 
-- Rows: `1,109`
-- Tickers: `34`
-- Total feature count: `95`
-- New Alpha Vantage feature count: `20`
+| Model | Mean CV AUC | Mean CV Log Loss | Holdout AUC | Holdout Log Loss | Holdout Precision | Holdout Recall | Holdout Rank IC | XGBoost Backend | Selected Primary |
+|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| logistic_regression | 0.5164 | 0.7706 | 0.5141 | 0.7563 | 0.5132 | 0.5735 | 0.0414 | cpu |  |
+| random_forest | 0.5253 | 0.6990 | 0.4876 | 0.6973 | 0.4648 | 0.4853 | -0.0277 | cpu |  |
+| xgboost | 0.5262 | 0.7984 | 0.5580 | 0.7276 | 0.5714 | 0.5882 | 0.1223 | cpu | yes |
 
-## Baseline vs Additive
+## Feature Exclusions
 
-| Model | Baseline CV AUC | Additive CV AUC | Baseline Holdout AUC | Additive Holdout AUC | Baseline CV Log Loss | Additive CV Log Loss | Baseline Holdout Log Loss | Additive Holdout Log Loss |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| logistic_regression | 0.5181 | 0.5096 | 0.5051 | 0.5341 | 0.7510 | 0.7703 | 0.7409 | 0.7448 |
-| random_forest | 0.5260 | 0.5232 | 0.5237 | 0.5109 | 0.6989 | 0.6992 | 0.6945 | 0.6947 |
-| xgboost | 0.5244 | 0.5233 | 0.5290 | 0.5774 | 0.8119 | 0.7990 | 0.7569 | 0.7132 |
+- Explicit exclusions: `gross_margin, current_filing_sentiment_available`
+- Auto all-missing exclusions: `none`
+- Auto constant exclusions: `none`
 
-## Decision
+## Selected Primary Model
 
-- Baseline selected model: `random_forest`
-- Additive selected model: `xgboost`
-- Current benchmark result is identical to baseline because every new Alpha Vantage feature was dropped by the existing 20% train-fold missingness rule under the partial backfill coverage.
-- This should be treated as a partial-cache diagnostic run, not the final official Phase 6B verdict, until the remaining manifest rows are fetched with refreshed or replacement API keys.
-- This benchmark should be read as the apples-to-apples Phase 6B test against the locked Phase 4 anchor.
+- Selected model: `xgboost`
+- Mean CV AUC: `0.5262`
+- Mean CV log loss: `0.7984`
+- 2024 holdout AUC: `0.5580`
+- 2024 holdout log loss: `0.7276`
+
+## Interpretation
+
+- Against the old daily/event_v1 direction (`event_v1_layer1` best model `hist_gradient_boosting`), the redesigned event setup improves best CV AUC from `0.5056` to `0.5262` and best holdout AUC from `0.5180` to `0.5580`.
+- The redesigned setup is directionally better than the old daily research path, but the edge is still modest. This should be treated as a cleaner anchor, not as proof that the problem is solved.
+- XGBoost ran on CPU in this benchmark because the local stack does not support clean CUDA prediction without the device-mismatch warning.

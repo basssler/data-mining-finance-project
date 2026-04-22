@@ -1,29 +1,37 @@
-# Event Panel V2 SEC Sentiment V1 Benchmark
+# Event Panel V2 Primary Benchmark
 
-## Scope
+## Locked Setup
 
-- Locked 34-ticker setup only.
-- Same 5-trading-day excess return sign label.
-- Same 2024 holdout and same three anchor models.
-- No universe expansion and no new external datasets.
+- Primary panel: `event_panel_v2`
+- Primary label: `5-trading-day excess return sign`
+- Models: `logistic_regression`, `random_forest`, `xgboost`
+- 2024 holdout policy: unchanged
+- This report is the new post-fix anchor to use before universe expansion.
 
-## Important Note
+## Per-Model Results
 
-- The selected SEC filing sentiment artifact was already embedded in the locked `event_panel_v2` Phase 4 anchor.
-- This Phase 6 run is therefore a reproducibility and explicit documentation pass for that existing dataset path, not a truly new incremental additive signal test.
+| Model | Mean CV AUC | Mean CV Log Loss | Holdout AUC | Holdout Log Loss | Holdout Precision | Holdout Recall | Holdout Rank IC | XGBoost Backend | Selected Primary |
+|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| logistic_regression | 0.5254 | 0.7527 | 0.4919 | 0.7492 | 0.5072 | 0.5147 | 0.0538 | cpu |  |
+| random_forest | 0.5228 | 0.6987 | 0.4960 | 0.6999 | 0.4545 | 0.4412 | -0.0455 | cpu |  |
+| xgboost | 0.5415 | 0.7950 | 0.5388 | 0.7474 | 0.5616 | 0.6029 | 0.0902 | cpu | yes |
 
-## Panel Comparison
+## Feature Exclusions
 
-| Panel | Rows | Tickers | Feature Count | Selected Model |
-|---|---:|---:|---:|---|
-| Phase 4 anchor | 1,109 | 34 | 72 | random_forest |
-| Phase 6 sec sentiment v1 | 1,109 | 34 | 72 | random_forest |
+- Explicit exclusions: `gross_margin, current_filing_sentiment_available`
+- Auto all-missing exclusions: `none`
+- Auto constant exclusions: `none`
 
-## Per-Model Comparison
+## Selected Primary Model
 
-| Model | Phase 4 CV AUC | Phase 6 CV AUC | Phase 4 CV Log Loss | Phase 6 CV Log Loss | Phase 4 Holdout AUC | Phase 6 Holdout AUC | Phase 4 Holdout Log Loss | Phase 6 Holdout Log Loss |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| logistic_regression | 0.5181 | 0.5181 | 0.7510 | 0.7510 | 0.5051 | 0.5051 | 0.7409 | 0.7409 |
-| random_forest | 0.5260 | 0.5260 | 0.6989 | 0.6989 | 0.5237 | 0.5237 | 0.6945 | 0.6945 |
-| xgboost | 0.5244 | 0.5244 | 0.8119 | 0.8119 | 0.5290 | 0.5290 | 0.7569 | 0.7569 |
+- Selected model: `xgboost`
+- Mean CV AUC: `0.5415`
+- Mean CV log loss: `0.7950`
+- 2024 holdout AUC: `0.5388`
+- 2024 holdout log loss: `0.7474`
 
+## Interpretation
+
+- Against the old daily/event_v1 direction (`event_v1_layer1` best model `hist_gradient_boosting`), the redesigned event setup improves best CV AUC from `0.5056` to `0.5415` and best holdout AUC from `0.5180` to `0.5388`.
+- The redesigned setup is directionally better than the old daily research path, but the edge is still modest. This should be treated as a cleaner anchor, not as proof that the problem is solved.
+- XGBoost ran on CPU in this benchmark because the local stack does not support clean CUDA prediction without the device-mismatch warning.

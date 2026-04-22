@@ -1,5 +1,5 @@
 panel:
-  path: data/interim/event_panel_v2_sec_sentiment_v1.parquet
+  path: data/interim/event_panel_v2.parquet
   name: event_panel_v2_sec_sentiment_v1
 
 prices:

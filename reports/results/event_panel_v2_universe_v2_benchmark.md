@@ -1,39 +1,37 @@
-# Event Panel V2 Universe V2 Benchmark
+# Event Panel V2 Primary Benchmark
 
-## Scope
+## Locked Setup
 
-- Locked setup unchanged: `event_panel_v2`, `5-trading-day excess return sign`, logistic regression, random forest, XGBoost.
-- This report compares the locked 34-name benchmark against the Phase 5 expanded large-cap cross-sector universe.
+- Primary panel: `event_panel_v2`
+- Primary label: `5-trading-day excess return sign`
+- Models: `logistic_regression`, `random_forest`, `xgboost`
+- 2024 holdout policy: unchanged
+- This report is the new post-fix anchor to use before universe expansion.
 
-## Panel Comparison
+## Per-Model Results
 
-| Panel | Rows | Tickers | Event Date Range | Event Counts | Selected Model |
-|---|---:|---:|---|---|---|
-| 34-name locked panel | 1,109 | 34 | 2015-07-31 to 2024-12-19 | 10-K=278, 10-Q=831 | random_forest |
-| universe_v2 expanded panel | 4,908 | 126 | 2014-12-29 to 2024-12-20 | 10-K=1,226, 10-Q=3,682 | logistic_regression |
-
-## Per-Model Comparison
-
-| Model | 34-Name CV AUC | Universe_v2 CV AUC | 34-Name CV Log Loss | Universe_v2 CV Log Loss | 34-Name Holdout AUC | Universe_v2 Holdout AUC | 34-Name Holdout Log Loss | Universe_v2 Holdout Log Loss |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| logistic_regression | 0.5181 | 0.5013 | 0.7510 | 0.7014 | 0.5051 | 0.5068 | 0.7409 | 0.6945 |
-| random_forest | 0.5260 | 0.4860 | 0.6989 | 0.7005 | 0.5237 | 0.4859 | 0.6945 | 0.6979 |
-| xgboost | 0.5244 | 0.4960 | 0.8119 | 0.7468 | 0.5290 | 0.5091 | 0.7569 | 0.7100 |
+| Model | Mean CV AUC | Mean CV Log Loss | Holdout AUC | Holdout Log Loss | Holdout Precision | Holdout Recall | Holdout Rank IC | XGBoost Backend | Selected Primary |
+|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| logistic_regression | 0.4977 | 0.7022 | 0.4917 | 0.7013 | 0.4520 | 0.7048 | 0.0212 | cpu |  |
+| random_forest | 0.5021 | 0.6979 | 0.5282 | 0.6932 | 0.4774 | 0.6035 | 0.0705 | cpu | yes |
+| xgboost | 0.5006 | 0.7471 | 0.5242 | 0.7069 | 0.4803 | 0.5374 | 0.0570 | cpu |  |
 
 ## Feature Exclusions
 
-- Explicit exclusions carried forward: `["gross_margin", "current_filing_sentiment_available"]`
-- Auto all-missing exclusions on expanded universe: `["sec_sentiment_score", "sec_positive_prob", "sec_negative_prob", "sec_neutral_prob", "sec_sentiment_abs", "sec_sentiment_change_prev", "sec_positive_change_prev", "sec_negative_change_prev", "sec_chunk_count", "sec_log_chunk_count"]`
-- Auto constant exclusions on expanded universe: `[]`
+- Explicit exclusions: `gross_margin, current_filing_sentiment_available`
+- Auto all-missing exclusions: `none`
+- Auto constant exclusions: `none`
 
-## Decision
+## Selected Primary Model
 
-- Did more names improve stability or signal? `mixed_or_no`. Expanded-universe best CV AUC moved from `0.5260` to `0.5013`, and best holdout AUC moved from `0.5237` to `0.5068`.
-- Did the same primary model remain best? `no`. Current locked winner: `random_forest`. Expanded-universe winner: `logistic_regression`.
-- Should the expanded universe become the new default research universe? `not_yet`.
-- Recommendation: keep the wider universe as a ready scaling path, but do not promote it to the default unless the rerun shows a clean improvement on both CV and 2024 holdout.
+- Selected model: `random_forest`
+- Mean CV AUC: `0.5021`
+- Mean CV log loss: `0.6979`
+- 2024 holdout AUC: `0.5282`
+- 2024 holdout log loss: `0.6932`
 
 ## Interpretation
 
-- This Phase 5 report is the scale test only. It does not change the observation unit, label horizon, feature families, or model set.
-- If the expanded universe wins cleanly, it becomes the better pre-external-data anchor because it adds cross-sectional breadth without changing the locked method stack.
+- Against the old daily/event_v1 direction (`event_v1_layer1` best model `hist_gradient_boosting`), the redesigned event setup improves best CV AUC from `0.5056` to `0.5021` and best holdout AUC from `0.5180` to `0.5282`.
+- The redesigned setup is directionally better than the old daily research path, but the edge is still modest. This should be treated as a cleaner anchor, not as proof that the problem is solved.
+- XGBoost ran on CPU in this benchmark because the local stack does not support clean CUDA prediction without the device-mismatch warning.

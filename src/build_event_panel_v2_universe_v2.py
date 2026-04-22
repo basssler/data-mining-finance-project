@@ -23,6 +23,10 @@ if __package__ is None or __package__ == "":
         sys.path.insert(0, str(project_root))
 
 from src import edgar_pull, feature_engineering, fundamentals_clean, market_features_v2, prices
+from src.event_panel_v2_schema import (
+    assert_matches_canonical_base_contract,
+    order_columns_with_canonical_base_first,
+)
 from src.panel_builder_event_v2 import build_event_panel_v2, print_summary as print_event_panel_summary
 from src.paths import DATA_DIR, DOCS_DIR, INTERIM_DATA_DIR, RAW_DATA_DIR
 from src.sec_filing_events_v1 import (
@@ -416,6 +420,11 @@ def build_final_panel_artifact() -> pd.DataFrame:
         market_path=UNIVERSE_V2_MARKET_FEATURES_PATH,
         sentiment_path=UNIVERSE_V2_SEC_SENTIMENT_FEATURES_PATH,
     )
+    canonical_columns = assert_matches_canonical_base_contract(
+        panel_df,
+        panel_name="event_panel_v2_universe_v2",
+    )
+    panel_df = order_columns_with_canonical_base_first(panel_df, canonical_columns=canonical_columns)
     panel_df.to_parquet(UNIVERSE_V2_PANEL_PATH, index=False)
     print_event_panel_summary(panel_df)
     return panel_df
