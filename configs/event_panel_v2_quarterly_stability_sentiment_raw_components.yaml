@@ -114,6 +114,9 @@ random_seed:
   sklearn: 42
   xgboost: 42
 
+promotion:
+  strategy: stability_aware
+
 metadata:
   report_title: "Quarterly Stability Sentiment Raw Components Benchmark"
   label_description: "63-trading-day excess return sign"
@@ -129,3 +132,4 @@ outputs:
   markdown: reports/results/event_panel_v2_quarterly_stability_sentiment_raw_components_benchmark.md
   shap_plot: reports/results/event_panel_v2_quarterly_stability_sentiment_raw_components_shap_summary.png
   shap_csv: reports/results/event_panel_v2_quarterly_stability_sentiment_raw_components_shap_importance.csv
+  validation_dir: outputs/quarterly/validation/event_panel_v2_quarterly_stability_sentiment_raw_components

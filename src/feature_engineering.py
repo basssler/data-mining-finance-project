@@ -31,7 +31,8 @@ if __package__ is None or __package__ == "":
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
-from src.paths import INTERIM_DATA_DIR
+from src.accounting_concepts import UNLOCKED_FEATURE_REQUIREMENTS
+from src.paths import INTERIM_DATA_DIR, QUARTERLY_OUTPUTS_DIAGNOSTICS_DIR
 
 REQUIRED_METADATA_COLUMNS = [
     "ticker",
@@ -59,6 +60,16 @@ FEATURE_COLUMNS = [
     "asset_turnover",
     "inventory_turnover",
     "receivables_turnover",
+    "interest_coverage",
+    "total_debt_to_assets",
+    "capex_intensity",
+    "free_cash_flow",
+    "free_cash_flow_margin",
+    "free_cash_flow_to_net_income",
+    "leverage_change_qoq",
+    "sga_to_revenue",
+    "r_and_d_to_revenue",
+    "shareholder_payout_ratio",
     "revenue_growth_qoq",
     "revenue_growth_yoy",
     "earnings_growth_qoq",
@@ -278,13 +289,26 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     operating_income = get_series(features_df, "operating_income")
     operating_cash_flow = get_series(features_df, "operating_cash_flow")
     long_term_debt = get_series(features_df, "long_term_debt")
+    short_term_debt = get_series(features_df, "short_term_debt")
     inventory = get_series(features_df, "inventory")
     accounts_receivable = get_series(features_df, "accounts_receivable")
+    cogs = get_series(features_df, "cogs")
+    gross_profit = get_series(features_df, "gross_profit")
+    ebit = get_series(features_df, "ebit")
+    interest_expense = get_series(features_df, "interest_expense").abs()
+    capex = get_series(features_df, "capex").abs()
+    sga = get_series(features_df, "sga")
+    r_and_d = get_series(features_df, "r_and_d")
+    share_repurchases = get_series(features_df, "share_repurchases").abs()
+    dividends_paid = get_series(features_df, "dividends_paid").abs()
 
     average_total_assets = compute_average_balance(features_df, "total_assets")
     average_shareholders_equity = compute_average_balance(features_df, "shareholders_equity")
     average_inventory = compute_average_balance(features_df, "inventory")
     average_accounts_receivable = compute_average_balance(features_df, "accounts_receivable")
+    total_debt = short_term_debt.fillna(0.0) + long_term_debt.fillna(0.0)
+    total_debt_ratio = safe_divide(total_debt, total_assets)
+    free_cash_flow = operating_cash_flow - capex
 
     # Liquidity ratios
     # current_ratio = current_assets / current_liabilities
@@ -314,8 +338,8 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Profitability ratios
     # gross_margin stays NaN unless a usable gross profit column already exists.
-    gross_profit = get_series(features_df, "gross_profit")
-    features_df["gross_margin"] = safe_divide(gross_profit, revenue)
+    gross_profit_fallback = gross_profit.where(gross_profit.notna(), revenue - cogs)
+    features_df["gross_margin"] = safe_divide(gross_profit_fallback, revenue)
 
     # operating_margin = operating_income / revenue
     features_df["operating_margin"] = safe_divide(operating_income, revenue)
@@ -333,11 +357,41 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     # asset_turnover = revenue / average_total_assets
     features_df["asset_turnover"] = safe_divide(revenue, average_total_assets)
 
-    # inventory_turnover = revenue / average_inventory
-    features_df["inventory_turnover"] = safe_divide(revenue, average_inventory)
+    # inventory_turnover = cogs / average_inventory
+    features_df["inventory_turnover"] = safe_divide(cogs, average_inventory)
 
     # receivables_turnover = revenue / average_accounts_receivable
     features_df["receivables_turnover"] = safe_divide(revenue, average_accounts_receivable)
+
+    # interest_coverage = EBIT / interest_expense
+    features_df["interest_coverage"] = safe_divide(ebit.where(ebit.notna(), operating_income), interest_expense)
+
+    # total_debt_to_assets = (short_term_debt + long_term_debt) / total_assets
+    features_df["total_debt_to_assets"] = total_debt_ratio
+
+    # capex_intensity = capex / revenue
+    features_df["capex_intensity"] = safe_divide(capex, revenue)
+
+    # free_cash_flow = operating_cash_flow - capex
+    features_df["free_cash_flow"] = free_cash_flow
+
+    # free_cash_flow_margin = free_cash_flow / revenue
+    features_df["free_cash_flow_margin"] = safe_divide(free_cash_flow, revenue)
+
+    # free_cash_flow_to_net_income = free_cash_flow / net_income
+    features_df["free_cash_flow_to_net_income"] = safe_divide(free_cash_flow, net_income)
+
+    # leverage_change_qoq = total_debt_to_assets_t - total_debt_to_assets_t-1
+    features_df["leverage_change_qoq"] = total_debt_ratio - total_debt_ratio.groupby(features_df["ticker"]).shift(1)
+
+    # sga_to_revenue = SG&A / revenue
+    features_df["sga_to_revenue"] = safe_divide(sga, revenue)
+
+    # r_and_d_to_revenue = R&D / revenue
+    features_df["r_and_d_to_revenue"] = safe_divide(r_and_d, revenue)
+
+    # shareholder_payout_ratio = (repurchases + dividends) / operating_cash_flow
+    features_df["shareholder_payout_ratio"] = safe_divide(share_repurchases + dividends_paid, operating_cash_flow)
 
     # Growth features
     # revenue_growth_qoq = (revenue_t - revenue_t-1) / revenue_t-1
@@ -450,6 +504,41 @@ def save_features(df: pd.DataFrame, output_path: Path) -> None:
     df.to_parquet(output_path, index=False)
 
 
+def build_unlocked_feature_feasibility_report(feature_df: pd.DataFrame) -> pd.DataFrame:
+    """Summarize which newly unlocked accounting features are materially feasible."""
+    total_rows = len(feature_df)
+    rows = []
+    for feature_name, required_inputs in UNLOCKED_FEATURE_REQUIREMENTS.items():
+        if feature_name in feature_df.columns:
+            feature_series = pd.to_numeric(feature_df[feature_name], errors="coerce")
+        else:
+            feature_series = pd.Series(np.nan, index=feature_df.index, dtype="float64")
+        coverage_count = int(feature_series.notna().sum())
+        coverage_pct = (coverage_count / total_rows * 100.0) if total_rows else 0.0
+        rows.append(
+            {
+                "feature_name": feature_name,
+                "required_inputs": "|".join(required_inputs),
+                "rows_with_value": coverage_count,
+                "total_rows": total_rows,
+                "coverage_pct": coverage_pct,
+                "materially_feasible": coverage_pct >= 25.0,
+            }
+        )
+    return pd.DataFrame(rows).sort_values(["materially_feasible", "coverage_pct", "feature_name"], ascending=[False, False, True])
+
+
+def save_unlocked_feature_feasibility_report(
+    feature_df: pd.DataFrame,
+    output_dir: Path = QUARTERLY_OUTPUTS_DIAGNOSTICS_DIR,
+) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_df = build_unlocked_feature_feasibility_report(feature_df)
+    output_path = output_dir / "accounting_feature_feasibility.csv"
+    report_df.to_csv(output_path, index=False)
+    return output_path
+
+
 def main() -> None:
     """Run the Layer 1 feature engineering pipeline."""
     input_path = get_input_path()
@@ -466,9 +555,11 @@ def main() -> None:
 
     print(f"Saving feature dataset to: {output_path}")
     save_features(feature_df, output_path)
+    feasibility_path = save_unlocked_feature_feasibility_report(feature_df)
 
     print_feature_summary(feature_df)
     print_feature_category_notes()
+    print(f"Unlocked feature feasibility: {feasibility_path}")
 
     print(f"\nSaved {len(feature_df):,} rows with Layer 1 features.")
 

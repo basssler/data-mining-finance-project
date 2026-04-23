@@ -1,0 +1,61 @@
+workflow_name: Quarterly Benchmark Ladder
+updated_note: Derived from the checked-in quarterly configs and benchmark artifacts in the current repo state.
+steps:
+  - ladder_step: 1
+    slug: daily-5d-baseline
+    title: Old daily 5-day baseline
+    objective: Preserve the pre-quarterly benchmark anchor for side-by-side comparison.
+    csv_path: reports/results/event_v1_layer1_metrics.json
+    markdown_path: reports/results/event_v1_layer1.md
+    notes: Historical baseline only. No quarterly config should point here.
+  - ladder_step: 2
+    slug: quarterly-event-baseline
+    title: Quarterly event baseline with old features
+    objective: Run the current 63-trading-day quarterly lane on the checked-in event panel.
+    config_path: configs/event_panel_v2_quarterly.yaml
+    csv_path: reports/results/event_panel_v2_quarterly_benchmark.csv
+    markdown_path: reports/results/event_panel_v2_quarterly_benchmark.md
+  - ladder_step: 3
+    slug: improved-label
+    title: Quarterly event baseline with improved label
+    objective: Compare a cleaner event-timed label definition against the current quarterly sign baseline.
+    notes: Planned. The repo still needs a distinct improved-label quarterly config and result set.
+  - ladder_step: 4
+    slug: purged-validation
+    title: Quarterly event baseline with purged validation
+    objective: Lock the quarterly lane onto explicit purged walk-forward diagnostics and fold review artifacts.
+    notes: Current quarterly configs already use purged splits, but this rung is reserved for a dedicated validation package.
+  - ladder_step: 5
+    slug: expanded-accounting
+    title: Quarterly event plus expanded accounting
+    objective: Test richer accounting coverage after the panel and validation rules are stable.
+    config_path: configs/event_panel_v2_quarterly_feature_design_core.yaml
+    csv_path: reports/results/event_panel_v2_quarterly_feature_design_core_benchmark.csv
+    markdown_path: reports/results/event_panel_v2_quarterly_feature_design_core_benchmark.md
+  - ladder_step: 6
+    slug: market-event-layer
+    title: Quarterly event plus market event layer
+    objective: Add event-aware market structure features on top of the quarterly accounting baseline.
+    config_path: configs/event_panel_v2_quarterly_feature_design_medium_market.yaml
+    csv_path: reports/results/event_panel_v2_quarterly_feature_design_medium_market_benchmark.csv
+    markdown_path: reports/results/event_panel_v2_quarterly_feature_design_medium_market_benchmark.md
+  - ladder_step: 7
+    slug: sentiment-event-layer
+    title: Quarterly event plus sentiment event layer
+    objective: Add filing-timed sentiment features without changing labels or validation.
+    config_path: configs/event_panel_v2_quarterly_feature_design_sentiment.yaml
+    csv_path: reports/results/event_panel_v2_quarterly_feature_design_sentiment_benchmark.csv
+    markdown_path: reports/results/event_panel_v2_quarterly_feature_design_sentiment_benchmark.md
+  - ladder_step: 8
+    slug: tuned-boosted-tree
+    title: Tuned boosted-tree model
+    objective: Run stability-aware quarterly variants before promoting a stronger nonlinear champion.
+    config_path: configs/event_panel_v2_quarterly_stability_core_additive.yaml
+    csv_path: reports/results/event_panel_v2_quarterly_stability_core_additive_benchmark.csv
+    markdown_path: reports/results/event_panel_v2_quarterly_stability_core_additive_benchmark.md
+    notes: This rung points to the first stability-aware tuned quarterly config that already exists in the repo.
+  - ladder_step: 9
+    slug: promoted-stable-champion
+    title: Promoted stable champion
+    objective: Promote only a quarterly model that wins on holdout quality and fold stability.
+    notes: Planned. Promotion should land only after a stable champion doc and artifact set exist.

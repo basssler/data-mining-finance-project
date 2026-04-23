@@ -1,33 +1,42 @@
-# Event Panel V2 Finance Research Repo
+# Quarterly Event Panel Research Repo
 
-This repository contains the current event-driven benchmark workflow for short-horizon stock-direction experiments on a 34-name Consumer Staples universe, plus derivative tests for universe expansion, SEC sentiment reproducibility, Alpha Vantage earnings features, and a parallel quarterly 63-trading-day excess-return-sign lane built on the same `event_panel_v2` base.
+This repository now treats the quarterly event-driven workflow as the canonical project path.
 
-The canonical benchmark in the checked-in artifacts is the enriched `event_panel_v2` result in `reports/results/event_panel_v2_primary_benchmark.csv`. On the current repo state, that anchor selects `xgboost` with CV AUC `0.5415` and 2024 holdout AUC `0.5388`.
+The live modeling unit is `one row = one quarterly filing event`. The live label is `event_v2_63d_sign`, which classifies the `63`-trading-day excess return sign relative to a sector equal-weight benchmark excluding the focal stock. The live validation policy is a `5`-fold purged expanding-window CV with a fixed `2024-01-01` holdout boundary.
 
-## What Is In Scope
+## Canonical Workflow
 
-- Event-based panel construction with point-in-time joins
-- Locked 5-trading-day excess-return-sign label
-- Parallel quarterly 63-trading-day excess-return-sign benchmark lane
-- Three-model benchmark matrix: `logistic_regression`, `random_forest`, `xgboost`
-- Derivative comparisons:
-  - Phase 5 universe expansion
-  - Phase 6 SEC sentiment reproducibility
-  - Phase 6B Alpha Vantage earnings additive test
+- Primary quarterly baseline config: `configs/event_panel_v2_quarterly.yaml`
+- Active quarterly candidate under review: `configs/event_panel_v2_quarterly_stability_core_additive.yaml`
+- Quarterly workflow manifest: `configs/quarterly/experiments/benchmark_ladder.yaml`
+- Quarterly benchmark log: `docs/quarterly/benchmark_log.md`
+- Quarterly experiment log: `docs/quarterly/experiment_log.md`
+- Quarterly benchmark registry: `docs/quarterly/promoted_models.md`
+
+No quarterly champion is promoted yet. The current candidate under review is `event_panel_v2_quarterly_stability_core_additive`, which selects `xgboost` at mean CV AUC `0.5262` and 2024 holdout AUC `0.4880`. It is the active promotion-track run because it sits on the stability ladder, but it has not cleared promotion criteria.
+
+## Legacy Daily Baseline
+
+The older daily `5`-trading-day workflow is preserved as a frozen comparator, not the live repo default.
+
+- Legacy config namespace: `configs/daily/`
+- Legacy docs namespace: `docs/daily/`
+- Frozen baseline config copy: `configs/daily/legacy_event_panel_v2_primary.yaml`
+- Historical benchmark artifact: `reports/results/event_panel_v2_primary_benchmark.csv`
+
+The root-level `configs/event_panel_v2_primary.yaml` remains in place for compatibility with existing scripts and reports, but it should be treated as a legacy daily artifact.
 
 ## Repo Layout
 
-- `src/`: panel builders, training scripts, benchmark reporters, and analysis utilities
-- `configs/`: YAML configs for the locked benchmark variants
-- `docs/`: workflow notes, decision memos, and experiment documentation
-- `reports/results/`: benchmark CSV and markdown outputs
-- `reports/`: class-facing summaries
-- `data/raw/`, `data/interim/`, `data/processed/`: source, intermediate, and modeled artifacts
-- `artifacts/`: feature-analysis and benchmark-adjacent outputs
+- `src/`: training, panel construction, reporting, and research utilities
+- `configs/daily/`: legacy daily baseline registry
+- `configs/quarterly/`: canonical quarterly manifests and indexes
+- `docs/daily/`: frozen daily workflow notes
+- `docs/quarterly/`: live quarterly workflow docs
+- `reports/results/`: checked-in benchmark outputs
+- `outputs/quarterly/`: generated quarterly diagnostics and future promotion artifacts
 
-## Environment
-
-Use the repo-local virtual environment, not the system Python.
+## Common Runs
 
 ```powershell
 python -m venv .venv
@@ -35,50 +44,34 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-All script examples below assume the working directory is the repo root and `.venv` is active.
-
-## Common Runs
-
-Regenerate the canonical enriched benchmark:
-
-```powershell
-.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_primary.yaml
-```
-
-Run the parallel quarterly 63-trading-day excess-return-sign lane on the same `event_panel_v2` base:
+Regenerate the live quarterly baseline:
 
 ```powershell
 .venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly.yaml
 ```
 
-Regenerate derivative benchmark CSVs:
+Refresh the active quarterly candidate:
 
 ```powershell
-.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_universe_v2.yaml
-.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_sec_sentiment_v1.yaml
-.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_phase6b_alpha_vantage.yaml
+.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly_stability_core_additive.yaml
 ```
 
-Regenerate report narratives from the checked-in benchmark artifacts:
+Refresh quarterly scaffold docs and diagnostics:
 
 ```powershell
-.venv\Scripts\python.exe src\report_event_panel_v2_universe_v2.py
-.venv\Scripts\python.exe src\report_event_panel_v2_sec_sentiment_v1.py
-.venv\Scripts\python.exe src\report_event_panel_v2_phase6b_alpha_vantage.py
+.venv\Scripts\python.exe -m src.quarterly_workflow --write-artifacts
 ```
 
-## Current Interpretation
+Run the legacy daily comparator only when a historical comparison is required:
 
-- `event_panel_v2` with the locked 5-trading-day excess-return-sign setup remains the main anchor in the historical benchmark and decision docs.
-- `event_panel_v2_quarterly` is an additive parallel 63-trading-day benchmark lane with separate outputs built from the same base panel.
-- `event_panel_v2_universe_v2` is a scale test and is not promoted on the current results.
-- `event_panel_v2_sec_sentiment_v1` currently reproduces the canonical benchmark rather than replacing it.
-- `event_panel_v2_phase6b_alpha_vantage` is a completed additive test with mixed results: higher selected-model holdout AUC than the canonical anchor, but lower selected-model CV AUC, so it is not promoted as the default.
+```powershell
+.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_primary.yaml
+```
 
-### 5-Day Anchor vs Quarterly Lane
+## Current Weaknesses
 
-Treat this as a parallel experiment, not a benchmark replacement. The existing 5-day anchor uses the `5-trading-day excess return sign` label on `1,109` active rows with `137` 2024 holdout rows; it selects `xgboost` with CV AUC `0.5415` and 2024 holdout AUC `0.5388`. The new quarterly lane uses the `63-trading-day excess return sign` label on `1,073` active rows with `101` 2024 holdout rows; it also selects `xgboost`, but at CV AUC `0.5270` and 2024 holdout AUC `0.4411`.
+- No quarterly run has cleared promotion yet.
+- The quarterly holdout remains weak relative to the historical daily baseline.
+- The benchmark ladder still lacks a dedicated improved-label rung and a dedicated promotion memo.
 
-The horizon change fixes part of the original framing problem, but an obvious feature/target mismatch still remains. In the quarterly lane, the feature set is still heavily populated by short- and medium-horizon market state inputs such as `volume_ratio_20d`, `vol_ratio_21d_63d`, `realized_vol_63d`, `overnight_gap_1d`, `drawdown_21d`, and `rel_return_5d`, alongside filing-timed sentiment features. That leaves the quarterly target at risk of being driven more by near-term trading regime proxies than by genuinely quarterly information arrival, so the lane should be read as a useful side-by-side test rather than the new default benchmark.
-
-For the artifact regeneration order, see `docs/benchmark_regeneration_runbook.md`.
+For regeneration order and artifact expectations, use `docs/benchmark_regeneration_runbook.md`.

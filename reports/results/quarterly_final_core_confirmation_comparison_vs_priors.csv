@@ -1,0 +1,4 @@
+comparison,model_name,label_variant,cv_auc_mean,cv_auc_std,worst_fold_auc,holdout_auc,holdout_row_count
+current_thresholded_confirmation,random_forest,event_v2_21d_excess_threshold,0.5126385158457065,0.0345550250791135,0.4651515151515151,0.5291353383458647,66
+prior_21d_excess_sign_label_run,xgboost,event_v2_21d_excess_sign,0.5001524355792691,0.0239623948566796,0.4756944444444444,0.5083732057416268,82
+older_63d_sign_default_core,xgboost,event_v2_63d_sign,0.5243465781102935,,,0.4426623897353648,101

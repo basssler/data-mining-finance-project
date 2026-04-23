@@ -8,31 +8,38 @@ Use the repo-local `.venv` for every run.
 
 ## Regeneration Order
 
-1. Regenerate the canonical enriched benchmark first.
+1. Regenerate the live quarterly baseline first.
 
 ```powershell
-.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_primary.yaml
-```
-
-2. Regenerate derivative benchmark CSVs that depend on the canonical benchmark for comparison.
-
-```powershell
-.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_universe_v2.yaml
-.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_sec_sentiment_v1.yaml
-.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_phase6b_alpha_vantage.yaml
 .venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly.yaml
 ```
 
-3. Regenerate narrative reports from the current benchmark CSVs and manifest state.
+2. Regenerate the active quarterly candidate and quarterly scaffold diagnostics.
 
 ```powershell
-.venv\Scripts\python.exe src\report_event_panel_v2_universe_v2.py
-.venv\Scripts\python.exe src\report_event_panel_v2_sec_sentiment_v1.py
-.venv\Scripts\python.exe src\report_event_panel_v2_phase6b_alpha_vantage.py
+.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly_stability_core_additive.yaml
+.venv\Scripts\python.exe -m src.quarterly_workflow --write-artifacts
+```
+
+3. Regenerate quarterly comparison runs only when the ladder needs to be refreshed.
+
+```powershell
+.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly_feature_design_core.yaml
+.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly_feature_design_medium_market.yaml
+.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly_feature_design_sentiment.yaml
+```
+
+4. Regenerate legacy or side-lane artifacts only when a historical comparison is needed.
+
+```powershell
+.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_primary.yaml
+.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_universe_v2.yaml
+.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_sec_sentiment_v1.yaml
+.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_phase6b_alpha_vantage.yaml
 ```
 
 ## Notes
 
-- Treat `reports/results/event_panel_v2_primary_benchmark.csv` as the comparison anchor unless a regenerated benchmark clearly replaces it.
+- Treat `reports/results/event_panel_v2_quarterly_benchmark.csv` as the live baseline comparison anchor.
+- Treat `reports/results/event_panel_v2_primary_benchmark.csv` as the frozen daily historical comparator.
 - Regenerate the derivative reports after their benchmark CSVs are refreshed; otherwise the narratives can drift from the artifacts.
-- For verification-only runs, you can pass alternate markdown output paths to the report scripts to avoid overwriting checked-in generated files outside the intended edit scope.

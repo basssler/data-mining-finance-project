@@ -6,20 +6,39 @@ import argparse
 import importlib.util
 import json
 import math
+import subprocess
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from xgboost import XGBClassifier
-from xgboost.core import XGBoostError
+try:
+    from xgboost import XGBClassifier
+    from xgboost.core import XGBoostError
+except ImportError:  # pragma: no cover - optional dependency
+    XGBClassifier = None
+
+    class XGBoostError(Exception):
+        """Fallback error when xgboost is not installed."""
+
+
+try:
+    from lightgbm import LGBMClassifier
+except ImportError:  # pragma: no cover - optional dependency
+    LGBMClassifier = None
+
+try:
+    from catboost import CatBoostClassifier
+except ImportError:  # pragma: no cover - optional dependency
+    CatBoostClassifier = None
 
 if __package__ is None or __package__ == "":
     project_root = Path(__file__).resolve().parents[1]
@@ -63,11 +82,80 @@ class VariantSpec:
     horizon_days: int
     label_mode: str
     quantile: float | None = None
+    threshold: float | None = None
 
 
 def has_clean_xgboost_gpu_support() -> bool:
     """Return True only when the local stack can use XGBoost GPU cleanly."""
-    return importlib.util.find_spec("cupy") is not None
+    return get_xgboost_gpu_status()[0]
+
+
+@lru_cache(maxsize=1)
+def has_nvidia_gpu() -> bool:
+    try:
+        completed = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError):
+        return False
+    return bool(completed.stdout.strip())
+
+
+@lru_cache(maxsize=1)
+def get_xgboost_gpu_status() -> tuple[bool, str]:
+    if XGBClassifier is None:
+        return False, "xgboost_not_installed"
+    if not has_nvidia_gpu():
+        return False, "nvidia_gpu_not_detected"
+    try:
+        probe_x = np.array([[0.0], [1.0], [2.0], [3.0]], dtype="float32")
+        probe_y = np.array([0, 1, 0, 1], dtype="int64")
+        probe_model = XGBClassifier(
+            n_estimators=4,
+            max_depth=2,
+            learning_rate=0.1,
+            random_state=42,
+            n_jobs=1,
+            tree_method="hist",
+            device="cuda",
+            eval_metric="logloss",
+        )
+        probe_model.fit(probe_x, probe_y)
+        probe_model.predict_proba(probe_x)
+        return True, "cuda_ready"
+    except Exception as exc:  # pragma: no cover - hardware/runtime dependent
+        return False, f"xgboost_gpu_probe_failed:{exc.__class__.__name__}"
+
+
+@lru_cache(maxsize=1)
+def get_catboost_gpu_status() -> tuple[bool, str]:
+    if CatBoostClassifier is None:
+        return False, "catboost_not_installed"
+    if not has_nvidia_gpu():
+        return False, "nvidia_gpu_not_detected"
+    try:
+        probe_x = np.array([[0.0], [1.0], [2.0], [3.0]], dtype="float32")
+        probe_y = np.array([0, 1, 0, 1], dtype="int64")
+        probe_model = CatBoostClassifier(
+            iterations=4,
+            depth=2,
+            learning_rate=0.1,
+            loss_function="Logloss",
+            eval_metric="Logloss",
+            random_seed=42,
+            verbose=False,
+            allow_writing_files=False,
+            task_type="GPU",
+        )
+        probe_model.fit(probe_x, probe_y)
+        probe_model.predict_proba(probe_x)
+        return True, "cuda_ready"
+    except Exception as exc:  # pragma: no cover - hardware/runtime dependent
+        return False, f"catboost_gpu_probe_failed:{exc.__class__.__name__}"
 
 
 def parse_args() -> argparse.Namespace:
@@ -189,11 +277,19 @@ def candidate_feature_columns(panel_df: pd.DataFrame) -> list[str]:
 
 
 def attach_labels_to_event_panel(panel_df: pd.DataFrame, label_df: pd.DataFrame) -> pd.DataFrame:
+    join_keys = ["ticker", "date"]
+    validate_mode = "many_to_one"
+    label_join_df = label_df.copy()
+    if "event_id" in panel_df.columns and "event_id" in label_df.columns:
+        join_keys = ["event_id"]
+        validate_mode = "one_to_one"
+        duplicate_columns = [column for column in ["ticker", "date"] if column in label_join_df.columns]
+        label_join_df = label_join_df.drop(columns=duplicate_columns, errors="ignore")
     joined = panel_df.merge(
-        label_df,
-        on=["ticker", "date"],
+        label_join_df,
+        on=join_keys,
         how="left",
-        validate="many_to_one",
+        validate=validate_mode,
     )
     return joined.sort_values(["date", "ticker"]).reset_index(drop=True)
 
@@ -229,8 +325,21 @@ def clip_outliers(
     clipped_train = train_df.copy()
     clipped_test = test_df.copy()
     for column in feature_columns:
-        lower_bound = clipped_train[column].quantile(DEFAULT_CLIP_LOWER_QUANTILE)
-        upper_bound = clipped_train[column].quantile(DEFAULT_CLIP_UPPER_QUANTILE)
+        train_series = clipped_train[column]
+        test_series = clipped_test[column]
+        if pd.api.types.is_bool_dtype(train_series):
+            train_series = train_series.astype("float64")
+            test_series = test_series.astype("float64")
+            clipped_train[column] = train_series
+            clipped_test[column] = test_series
+        elif not pd.api.types.is_numeric_dtype(train_series):
+            train_series = pd.to_numeric(train_series, errors="coerce")
+            test_series = pd.to_numeric(test_series, errors="coerce")
+            clipped_train[column] = train_series
+            clipped_test[column] = test_series
+
+        lower_bound = train_series.quantile(DEFAULT_CLIP_LOWER_QUANTILE)
+        upper_bound = train_series.quantile(DEFAULT_CLIP_UPPER_QUANTILE)
         if pd.isna(lower_bound) or pd.isna(upper_bound):
             continue
         clipped_train[column] = clipped_train[column].clip(lower=lower_bound, upper=upper_bound)
@@ -270,64 +379,172 @@ def resolve_max_missingness_pct(feature_exclusions: dict | None = None) -> float
     return float(value)
 
 
-def build_logistic_pipeline() -> Pipeline:
+def build_logistic_pipeline(model_params: dict | None = None) -> Pipeline:
+    params = {
+        "max_iter": 1000,
+        "solver": "lbfgs",
+        "class_weight": "balanced",
+        "random_state": 42,
+    }
+    if model_params:
+        params.update(model_params)
     return Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="median")),
             ("scaler", StandardScaler()),
             (
                 "model",
-                LogisticRegression(
-                    max_iter=1000,
-                    solver="lbfgs",
-                    class_weight="balanced",
-                    random_state=42,
-                ),
+                LogisticRegression(**params),
             ),
         ]
     )
 
 
-def build_random_forest_pipeline() -> Pipeline:
+def build_elastic_net_logistic_pipeline(model_params: dict | None = None) -> Pipeline:
+    params = {
+        "max_iter": 2000,
+        "solver": "saga",
+        "penalty": "elasticnet",
+        "l1_ratio": 0.5,
+        "C": 0.5,
+        "class_weight": "balanced",
+        "random_state": 42,
+    }
+    if model_params:
+        params.update(model_params)
     return Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
             (
                 "model",
-                RandomForestClassifier(
-                    n_estimators=300,
-                    max_depth=8,
-                    min_samples_leaf=20,
-                    class_weight="balanced_subsample",
-                    random_state=42,
-                    n_jobs=1,
-                ),
+                LogisticRegression(**params),
             ),
         ]
     )
 
 
-def build_xgboost_pipeline(device: str) -> Pipeline:
+def build_random_forest_pipeline(model_params: dict | None = None) -> Pipeline:
+    params = {
+        "n_estimators": 300,
+        "max_depth": 8,
+        "min_samples_leaf": 20,
+        "class_weight": "balanced_subsample",
+        "random_state": 42,
+        "n_jobs": 1,
+    }
+    if model_params:
+        params.update(model_params)
     return Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="median")),
             (
                 "model",
-                XGBClassifier(
-                    n_estimators=300,
-                    max_depth=4,
-                    learning_rate=0.05,
-                    subsample=0.8,
-                    colsample_bytree=0.8,
-                    min_child_weight=5,
-                    reg_lambda=1.0,
-                    random_state=42,
-                    n_jobs=1,
-                    tree_method="hist",
-                    device=device,
-                    eval_metric="logloss",
-                ),
+                RandomForestClassifier(**params),
             ),
+        ]
+    )
+
+
+def build_hist_gradient_boosting_pipeline(model_params: dict | None = None) -> Pipeline:
+    params = {
+        "max_depth": 4,
+        "learning_rate": 0.05,
+        "max_iter": 300,
+        "min_samples_leaf": 20,
+        "random_state": 42,
+    }
+    if model_params:
+        params.update(model_params)
+    return Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("model", HistGradientBoostingClassifier(**params)),
+        ]
+    )
+
+
+def build_xgboost_pipeline(device: str, model_params: dict | None = None) -> Pipeline:
+    if XGBClassifier is None:
+        raise ImportError("xgboost is not installed.")
+    params = {
+        "n_estimators": 300,
+        "max_depth": 4,
+        "learning_rate": 0.05,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "min_child_weight": 5,
+        "reg_lambda": 1.0,
+        "random_state": 42,
+        "n_jobs": 1,
+        "tree_method": "hist",
+        "device": device,
+        "eval_metric": "logloss",
+    }
+    if model_params:
+        params.update(model_params)
+    return Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            (
+                "model",
+                XGBClassifier(**params),
+            ),
+        ]
+    )
+
+
+def build_lightgbm_pipeline(model_params: dict | None = None) -> Pipeline:
+    if LGBMClassifier is None:
+        raise ImportError("lightgbm is not installed.")
+    params = {
+        "n_estimators": 300,
+        "num_leaves": 31,
+        "learning_rate": 0.05,
+        "feature_fraction": 0.8,
+        "bagging_fraction": 0.8,
+        "bagging_freq": 1,
+        "min_child_samples": 20,
+        "reg_alpha": 0.0,
+        "reg_lambda": 0.0,
+        "objective": "binary",
+        "class_weight": "balanced",
+        "random_state": 42,
+        "n_jobs": 1,
+        "verbosity": -1,
+    }
+    if model_params:
+        params.update(model_params)
+    return Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("model", LGBMClassifier(**params)),
+        ]
+    )
+
+
+def build_catboost_pipeline(model_params: dict | None = None) -> Pipeline:
+    if CatBoostClassifier is None:
+        raise ImportError("catboost is not installed.")
+    params = {
+        "iterations": 300,
+        "depth": 6,
+        "learning_rate": 0.05,
+        "l2_leaf_reg": 3.0,
+        "random_strength": 1.0,
+        "bagging_temperature": 1.0,
+        "loss_function": "Logloss",
+        "eval_metric": "Logloss",
+        "random_seed": 42,
+        "verbose": False,
+        "allow_writing_files": False,
+    }
+    if model_params:
+        params.update(model_params)
+    return Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("model", CatBoostClassifier(**params)),
         ]
     )
 
@@ -336,22 +553,48 @@ def fit_model(
     model_name: str,
     x_train: pd.DataFrame,
     y_train: pd.Series,
+    model_params: dict | None = None,
 ) -> tuple[Pipeline, str]:
     if model_name == "logistic_regression":
-        model = build_logistic_pipeline()
+        model = build_logistic_pipeline(model_params=model_params)
+        return model.fit(x_train, y_train), "cpu"
+    if model_name == "elastic_net_logistic":
+        model = build_elastic_net_logistic_pipeline(model_params=model_params)
         return model.fit(x_train, y_train), "cpu"
     if model_name == "random_forest":
-        model = build_random_forest_pipeline()
+        model = build_random_forest_pipeline(model_params=model_params)
+        return model.fit(x_train, y_train), "cpu"
+    if model_name == "hist_gradient_boosting":
+        model = build_hist_gradient_boosting_pipeline(model_params=model_params)
         return model.fit(x_train, y_train), "cpu"
     if model_name == "xgboost":
-        if has_clean_xgboost_gpu_support():
+        gpu_ready, gpu_reason = get_xgboost_gpu_status()
+        if gpu_ready:
             try:
-                model = build_xgboost_pipeline(device="cuda")
+                model = build_xgboost_pipeline(device="cuda", model_params=model_params)
                 return model.fit(x_train, y_train), "cuda"
-            except (XGBoostError, ValueError):
+            except (ImportError, XGBoostError, ValueError):
                 pass
-        model = build_xgboost_pipeline(device="cpu")
+        model = build_xgboost_pipeline(device="cpu", model_params=model_params)
+        return model.fit(x_train, y_train), f"cpu:{gpu_reason}"
+    if model_name == "lightgbm":
+        model = build_lightgbm_pipeline(model_params=model_params)
         return model.fit(x_train, y_train), "cpu"
+    if model_name == "catboost":
+        gpu_ready, gpu_reason = get_catboost_gpu_status()
+        resolved_params = dict(model_params or {})
+        if gpu_ready:
+            resolved_params.setdefault("task_type", "GPU")
+            resolved_params.setdefault("devices", "0")
+            try:
+                model = build_catboost_pipeline(model_params=resolved_params)
+                return model.fit(x_train, y_train), "cuda"
+            except ValueError:
+                pass
+        resolved_params.pop("devices", None)
+        resolved_params["task_type"] = "CPU"
+        model = build_catboost_pipeline(model_params=resolved_params)
+        return model.fit(x_train, y_train), f"cpu:{gpu_reason}"
     raise ValueError(f"Unsupported model: {model_name}")
 
 
@@ -404,9 +647,25 @@ def apply_variant_label_mode(
 ) -> tuple[pd.DataFrame, dict]:
     prepared = df.copy()
     thresholds = {"lower": None, "upper": None}
+    if variant.label_mode == "precomputed":
+        if "target" not in prepared.columns:
+            raise ValueError("Precomputed label mode requires a target column.")
+        prepared["target"] = pd.to_numeric(prepared["target"], errors="coerce").astype("Int64")
+        prepared = prepared.dropna(subset=["target"]).copy()
+        return prepared, thresholds
     if variant.label_mode == "sign":
         prepared["target"] = prepared["target_sign"].astype("Int64")
         prepared = prepared.dropna(subset=["target", "excess_forward_return"]).copy()
+        return prepared, thresholds
+    if variant.label_mode == "thresholded":
+        if variant.threshold is None:
+            raise ValueError("Thresholded mode requires a threshold.")
+        prepared = prepared.dropna(subset=["excess_forward_return"]).copy()
+        positive = prepared["excess_forward_return"] > float(variant.threshold)
+        negative = prepared["excess_forward_return"] < -float(variant.threshold)
+        prepared = prepared.loc[positive | negative].copy()
+        prepared["target"] = positive.loc[prepared.index].astype("Int64")
+        thresholds = {"lower": -float(variant.threshold), "upper": float(variant.threshold)}
         return prepared, thresholds
     if variant.label_mode == "quantile":
         if variant.quantile is None or reference_excess is None:

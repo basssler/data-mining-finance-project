@@ -1,0 +1,7 @@
+fold_label,evaluation_role,train_start_date,train_end_date,overlap_purge_start_date,overlap_purge_end_date,embargo_start_date,embargo_end_date,validation_start_date,validation_end_date,train_date_count,validation_date_count,purged_date_count,overlap_purge_date_count,embargo_date_count,train_row_count,validation_row_count,purged_overlap_row_count,embargo_row_count
+fold_1,validation,2015-07-31,2019-01-24,2019-01-25,2019-03-29,2019-04-02,2019-04-24,2019-04-25,2020-03-12,227,83,25,20,5,315,122,29,6
+fold_2,validation,2015-07-31,2019-11-27,2019-12-04,2020-02-27,2020-02-28,2020-03-12,2020-03-19,2021-03-03,310,83,25,20,5,436,129,30,6
+fold_3,validation,2015-07-31,2020-11-16,2020-11-24,2021-02-19,2021-02-25,2021-03-03,2021-03-10,2022-02-18,393,83,25,20,5,565,123,29,7
+fold_4,validation,2015-07-31,2021-10-28,2021-10-29,2022-02-07,2022-02-09,2022-02-18,2022-02-22,2023-02-06,476,83,25,20,5,687,125,29,8
+fold_5,validation,2015-07-31,2022-10-20,2022-10-25,2023-01-20,2023-01-27,2023-02-06,2023-02-09,2023-12-21,559,82,25,20,5,812,123,31,6
+holdout,holdout_eval,2015-07-31,2023-08-30,2023-08-31,2023-12-01,2023-12-06,2023-12-21,2024-01-04,2024-12-19,641,89,25,20,5,932,137,32,8

@@ -45,62 +45,15 @@ if __package__ is None or __package__ == "":
         sys.path.insert(0, str(project_root))
 
 from src.config import END_DATE, START_DATE
+from src.accounting_concepts import CONCEPT_SPECS
 from src.paths import RAW_DATA_DIR
 from src.universe import get_layer1_tickers
 
 ALLOWED_FORM_TYPES = {"10-K", "10-Q", "10-K/A", "10-Q/A"}
 
 CONCEPT_CANDIDATES: Dict[str, List[str]] = {
-    "revenue": [
-        "RevenueFromContractWithCustomerExcludingAssessedTax",
-        "SalesRevenueNet",
-        "Revenues",
-        "Revenue",
-    ],
-    "net_income": [
-        "NetIncomeLoss",
-        "ProfitLoss",
-    ],
-    "total_assets": [
-        "Assets",
-    ],
-    "total_liabilities": [
-        "Liabilities",
-    ],
-    "current_assets": [
-        "AssetsCurrent",
-    ],
-    "current_liabilities": [
-        "LiabilitiesCurrent",
-    ],
-    "cash_and_cash_equivalents": [
-        "CashAndCashEquivalentsAtCarryingValue",
-        "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents",
-    ],
-    "shareholders_equity": [
-        "StockholdersEquity",
-        "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
-    ],
-    "operating_income": [
-        "OperatingIncomeLoss",
-    ],
-    "operating_cash_flow": [
-        "NetCashProvidedByUsedInOperatingActivities",
-        "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
-    ],
-    "long_term_debt": [
-        "LongTermDebtAndCapitalLeaseObligations",
-        "LongTermDebtNoncurrent",
-        "LongTermDebt",
-    ],
-    "inventory": [
-        "InventoryNet",
-        "InventoriesNetOfReserves",
-    ],
-    "accounts_receivable": [
-        "AccountsReceivableNetCurrent",
-        "ReceivablesNetCurrent",
-    ],
+    canonical_name: list(spec.candidate_tags)
+    for canonical_name, spec in CONCEPT_SPECS.items()
 }
 
 OUTPUT_COLUMNS = [
@@ -114,6 +67,7 @@ OUTPUT_COLUMNS = [
     "concept_name",
     "value",
     "unit",
+    "raw_tag",
     "source",
 ]
 
@@ -248,6 +202,7 @@ def normalize_record(record: dict) -> dict:
         "concept_name": record.get("concept_name"),
         "value": record.get("value"),
         "unit": record.get("unit"),
+        "raw_tag": record.get("raw_tag"),
         "source": record.get("source"),
     }
 
@@ -299,6 +254,7 @@ def fetch_company_facts_via_sec(
                                 "concept_name": concept_name,
                                 "value": fact.get("val"),
                                 "unit": unit_name,
+                                "raw_tag": tag,
                                 "source": "sec_companyfacts",
                             }
                         )
@@ -419,6 +375,7 @@ def fetch_company_facts_via_edgartools(
                             "concept_name": concept_name,
                             "value": row.get(value_col),
                             "unit": row.get(unit_col) if unit_col else None,
+                            "raw_tag": tag,
                             "source": "edgartools_companyfacts",
                         }
                     )
@@ -472,6 +429,7 @@ def build_dataframe(rows: List[dict]) -> pd.DataFrame:
     df["form_type"] = df["form_type"].astype("string")
     df["concept_name"] = df["concept_name"].astype("string")
     df["unit"] = df["unit"].astype("string")
+    df["raw_tag"] = df["raw_tag"].astype("string")
     df["source"] = df["source"].astype("string")
 
     df["filing_date"] = pd.to_datetime(df["filing_date"], errors="coerce")

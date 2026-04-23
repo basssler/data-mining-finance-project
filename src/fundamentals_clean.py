@@ -31,7 +31,14 @@ if __package__ is None or __package__ == "":
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
-from src.paths import INTERIM_DATA_DIR, RAW_DATA_DIR
+from src.accounting_concepts import (
+    CONCEPT_SPECS,
+    EXPECTED_CONCEPT_COLUMNS,
+    concept_priority_lookup,
+    export_concept_map,
+    source_priority,
+)
+from src.paths import INTERIM_DATA_DIR, QUARTERLY_OUTPUTS_DIAGNOSTICS_DIR, RAW_DATA_DIR
 
 RAW_REQUIRED_COLUMNS = [
     "ticker",
@@ -44,6 +51,7 @@ RAW_REQUIRED_COLUMNS = [
     "concept_name",
     "value",
     "unit",
+    "raw_tag",
     "source",
 ]
 
@@ -64,23 +72,6 @@ PERIOD_KEY_COLUMNS = [
 ]
 
 ALLOWED_FORM_TYPES = {"10-Q", "10-K", "10-Q/A", "10-K/A"}
-
-EXPECTED_CONCEPT_COLUMNS = [
-    "revenue",
-    "net_income",
-    "total_assets",
-    "total_liabilities",
-    "current_assets",
-    "current_liabilities",
-    "cash_and_cash_equivalents",
-    "shareholders_equity",
-    "operating_income",
-    "operating_cash_flow",
-    "long_term_debt",
-    "inventory",
-    "accounts_receivable",
-]
-
 
 def get_input_path() -> Path:
     """Return the raw parquet input path."""
@@ -115,6 +106,9 @@ def normalize_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """Normalize key column types before reshaping."""
     cleaned = df.copy()
 
+    if "raw_tag" not in cleaned.columns:
+        cleaned["raw_tag"] = pd.NA
+
     cleaned = cleaned[RAW_REQUIRED_COLUMNS].copy()
     cleaned = cleaned[cleaned["form_type"].isin(ALLOWED_FORM_TYPES)].copy()
 
@@ -124,6 +118,7 @@ def normalize_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     cleaned["form_type"] = cleaned["form_type"].astype("string")
     cleaned["concept_name"] = cleaned["concept_name"].astype("string")
     cleaned["unit"] = cleaned["unit"].astype("string")
+    cleaned["raw_tag"] = cleaned["raw_tag"].astype("string")
     cleaned["source"] = cleaned["source"].astype("string")
 
     cleaned["filing_date"] = pd.to_datetime(cleaned["filing_date"], errors="coerce")
@@ -145,16 +140,42 @@ def deduplicate_concept_rows(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     This resolves repeated raw fact rows before the wide pivot. The tie-break
     rule follows the project assumption: keep the most recently filed value.
     """
-    deduped = df.sort_values(
-        by=["ticker", "period_end", "concept_name", "filing_date"]
+    deduped = df.copy()
+    priority_lookup = concept_priority_lookup()
+    deduped["_preferred_unit_rank"] = deduped.apply(
+        lambda row: 0
+        if (
+            CONCEPT_SPECS.get(str(row["concept_name"])) is not None
+            and str(row["unit"]) == CONCEPT_SPECS[str(row["concept_name"])].preferred_unit
+        )
+        else 1,
+        axis=1,
+    )
+    deduped["_tag_priority_rank"] = deduped.apply(
+        lambda row: priority_lookup.get(str(row["concept_name"]), {}).get(str(row["raw_tag"]), 999),
+        axis=1,
+    )
+    deduped["_source_priority_rank"] = deduped["source"].map(source_priority).astype("Int64")
+    deduped = deduped.sort_values(
+        by=[
+            "ticker",
+            "period_end",
+            "concept_name",
+            "_preferred_unit_rank",
+            "_tag_priority_rank",
+            "_source_priority_rank",
+            "filing_date",
+        ],
+        ascending=[True, True, True, True, True, True, False],
     ).copy()
 
     original_row_count = len(deduped)
-    deduped = deduped.drop_duplicates(
-        subset=["ticker", "period_end", "concept_name"],
-        keep="last",
-    ).copy()
+    deduped = deduped.drop_duplicates(subset=["ticker", "period_end", "concept_name"], keep="first").copy()
     removed_count = original_row_count - len(deduped)
+    deduped = deduped.drop(
+        columns=["_preferred_unit_rank", "_tag_priority_rank", "_source_priority_rank"],
+        errors="ignore",
+    )
 
     return deduped, removed_count
 
@@ -264,6 +285,93 @@ def save_clean_fundamentals(df: pd.DataFrame, output_path: Path) -> None:
     df.to_parquet(output_path, index=False)
 
 
+def build_coverage_diagnostics(
+    concept_df: pd.DataFrame,
+    clean_df: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Build overall, ticker-level, and year-level coverage diagnostics."""
+    concept_columns = [column for column in EXPECTED_CONCEPT_COLUMNS if column in clean_df.columns]
+    total_rows = len(clean_df)
+    period_year = clean_df["period_end"].dt.year.astype("Int64")
+
+    overall_rows = []
+    for concept_name in concept_columns:
+        coverage_count = int(clean_df[concept_name].notna().sum())
+        overall_rows.append(
+            {
+                "concept_name": concept_name,
+                "preferred_unit": CONCEPT_SPECS[concept_name].preferred_unit,
+                "candidate_tags": "|".join(CONCEPT_SPECS[concept_name].candidate_tags),
+                "rows_with_value": coverage_count,
+                "total_rows": total_rows,
+                "coverage_pct": (coverage_count / total_rows * 100.0) if total_rows else 0.0,
+                "missing_pct_clean_table": ((total_rows - coverage_count) / total_rows * 100.0) if total_rows else 0.0,
+                "tickers_with_value": int(clean_df.loc[clean_df[concept_name].notna(), "ticker"].nunique()),
+                "years_with_value": int(period_year[clean_df[concept_name].notna()].nunique()),
+                "retained_raw_rows": int((concept_df["concept_name"] == concept_name).sum()),
+            }
+        )
+
+    by_ticker_frames = []
+    by_year_frames = []
+    for concept_name in concept_columns:
+        ticker_summary = (
+            clean_df.assign(has_value=clean_df[concept_name].notna().astype("int64"))
+            .groupby("ticker", dropna=False)
+            .agg(rows_with_value=("has_value", "sum"), total_rows=("has_value", "size"))
+            .reset_index()
+        )
+        ticker_summary["coverage_pct"] = ticker_summary["rows_with_value"] / ticker_summary["total_rows"] * 100.0
+        ticker_summary["concept_name"] = concept_name
+        by_ticker_frames.append(
+            ticker_summary[["concept_name", "ticker", "rows_with_value", "total_rows", "coverage_pct"]]
+        )
+
+        year_summary = (
+            clean_df.assign(period_year=period_year, has_value=clean_df[concept_name].notna().astype("int64"))
+            .groupby("period_year", dropna=False)
+            .agg(rows_with_value=("has_value", "sum"), total_rows=("has_value", "size"))
+            .reset_index()
+        )
+        year_summary["coverage_pct"] = year_summary["rows_with_value"] / year_summary["total_rows"] * 100.0
+        year_summary["concept_name"] = concept_name
+        by_year_frames.append(
+            year_summary[["concept_name", "period_year", "rows_with_value", "total_rows", "coverage_pct"]]
+        )
+
+    overall_df = pd.DataFrame(overall_rows).sort_values("concept_name").reset_index(drop=True)
+    by_ticker_df = pd.concat(by_ticker_frames, ignore_index=True) if by_ticker_frames else pd.DataFrame()
+    by_year_df = pd.concat(by_year_frames, ignore_index=True) if by_year_frames else pd.DataFrame()
+    return overall_df, by_ticker_df, by_year_df
+
+
+def save_coverage_diagnostics(
+    concept_df: pd.DataFrame,
+    clean_df: pd.DataFrame,
+    output_dir: Path = QUARTERLY_OUTPUTS_DIAGNOSTICS_DIR,
+) -> dict[str, Path]:
+    """Write accounting concept coverage diagnostics and the versioned concept map."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    overall_df, by_ticker_df, by_year_df = build_coverage_diagnostics(concept_df, clean_df)
+
+    overall_path = output_dir / "accounting_concept_coverage.csv"
+    by_ticker_path = output_dir / "accounting_concept_coverage_by_ticker.csv"
+    by_year_path = output_dir / "accounting_concept_coverage_by_year.csv"
+    concept_map_path = output_dir / "accounting_concept_map_v2.json"
+
+    overall_df.to_csv(overall_path, index=False)
+    by_ticker_df.to_csv(by_ticker_path, index=False)
+    by_year_df.to_csv(by_year_path, index=False)
+    export_concept_map(concept_map_path)
+
+    return {
+        "overall": overall_path,
+        "by_ticker": by_ticker_path,
+        "by_year": by_year_path,
+        "concept_map": concept_map_path,
+    }
+
+
 def main() -> None:
     """Run the fundamentals cleaning pipeline from raw long format to wide table."""
     input_path = get_input_path()
@@ -289,12 +397,19 @@ def main() -> None:
 
     print(f"Saving clean fundamentals to: {output_path}")
     save_clean_fundamentals(final_df, output_path)
+    diagnostic_paths = save_coverage_diagnostics(concept_deduped_df, final_df)
 
     print_data_quality_summary(
         df=final_df,
         concept_dedup_removed=concept_dedup_removed,
         period_dedup_removed=period_dedup_removed,
     )
+    print("\nCoverage diagnostics")
+    print("-" * 60)
+    print(f"Overall coverage: {diagnostic_paths['overall']}")
+    print(f"Coverage by ticker: {diagnostic_paths['by_ticker']}")
+    print(f"Coverage by year: {diagnostic_paths['by_year']}")
+    print(f"Concept map: {diagnostic_paths['concept_map']}")
 
     print(f"\nSaved {len(final_df):,} clean rows.")
 

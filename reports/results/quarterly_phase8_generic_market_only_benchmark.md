@@ -1,0 +1,39 @@
+# Quarterly Phase 8 generic_market_only
+
+## Locked Setup
+
+- Primary panel: `quarterly_final_core_confirmation_v1`
+- Primary label: `21-trading-day thresholded excess return (+/-1.5%)`
+- Models: `logistic_regression`, `random_forest`, `xgboost`
+- 2024 holdout policy: unchanged
+- Final quarterly-core confirmation run using the rescued levels_plus_deltas_plus_cross_sectional stack and the provisional 21d thresholded excess label.
+
+## Per-Model Results
+
+| Model | Mean CV AUC | CV AUC Std | Worst Fold AUC | Holdout AUC | Holdout Log Loss | Holdout Precision | Holdout Recall | Holdout Rank IC | XGBoost Backend | Selected Primary |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| logistic_regression | 0.5653 | 0.0459 | 0.4788 | 0.4248 | 1.4215 | 0.5714 | 0.5263 | -0.0390 | cpu | yes |
+| random_forest | 0.5124 | 0.0461 | 0.4421 | 0.4746 | 0.7097 | 0.5556 | 0.3947 | 0.0042 | cpu |  |
+| xgboost | 0.5202 | 0.0580 | 0.4074 | 0.4840 | 0.8279 | 0.5667 | 0.4474 | -0.0312 | cpu |  |
+
+## Feature Exclusions
+
+- Explicit exclusions: `gross_margin, current_filing_sentiment_available, sec_sentiment_score, sec_positive_prob, sec_negative_prob, sec_neutral_prob, sec_sentiment_abs, sec_sentiment_change_prev, sec_positive_change_prev, sec_negative_change_prev, sec_chunk_count, sec_log_chunk_count, qfd_mkt_first_tradable_abnormal_volume, qfd_mkt_first_tradable_gap, qfd_mkt_pre_event_excess_return_21d_market, qfd_mkt_pre_event_excess_return_21d_sector, qfd_mkt_pre_event_excess_return_5d_market, qfd_mkt_pre_event_excess_return_5d_sector, qfd_mkt_pre_event_return_21d, qfd_mkt_pre_event_return_5d, qfd_mkt_pre_event_vol_21d, qfd_mkt_pre_event_vol_5d, qfd_mkt_pre_event_vol_ratio_5_21, qfd_mkt_pre_event_volume_z_20d`
+- Auto all-missing exclusions: `inventory_turnover, interest_coverage, capex_intensity, free_cash_flow, free_cash_flow_margin, free_cash_flow_to_net_income, shareholder_payout_ratio, qfd_v2_gross_margin_lvl, qfd_v2_gross_margin_d1, qfd_v3_gross_margin_d1, qfd_v3_free_cash_flow_margin_d1, qfd_v3_interest_coverage_d1, qfd_v3_capex_intensity_d1, qfd_v3_shareholder_payout_ratio_d1, qfd_v3_free_cash_flow_to_net_income_d1`
+- Auto constant exclusions: `none`
+
+## Selected Primary Model
+
+- Selected model: `logistic_regression`
+- Promotion strategy: `stability_aware`
+- Mean CV AUC: `0.5653`
+- CV AUC std: `0.0459`
+- Worst fold AUC: `0.4788`
+- 2024 holdout AUC: `0.4248`
+- 2024 holdout log loss: `1.4215`
+
+## Interpretation
+
+- Against the old daily/event_v1 direction (`event_v1_layer1` best model `hist_gradient_boosting`), the redesigned event setup improves best CV AUC from `0.5056` to `0.5653` and best holdout AUC from `0.5180` to `0.4248`.
+- Promote this quarterly core only if the thresholded-label gain is meaningful relative to both the prior excess-sign winner and the older default-label baseline.
+- XGBoost ran on CPU in this benchmark because the local stack does not support clean CUDA prediction without the device-mismatch warning.

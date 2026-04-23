@@ -28,6 +28,16 @@ class SplitDateMetadata:
     validation_end_date: str
 
 
+@dataclass(frozen=True)
+class PurgeWindowMetadata:
+    """Human-readable purge and embargo ranges for one split."""
+
+    overlap_purge_start_date: str | None
+    overlap_purge_end_date: str | None
+    embargo_start_date: str | None
+    embargo_end_date: str | None
+
+
 def _normalize_dates(df: pd.DataFrame, date_col: str) -> pd.Series:
     """Return normalized pandas datetimes for the provided date column."""
     if date_col not in df.columns:
@@ -66,6 +76,38 @@ def _build_metadata(
         purge_end_date=_format_date(purge_dates[-1]) if len(purge_dates) else None,
         validation_start_date=_format_date(validation_dates[0]) or "",
         validation_end_date=_format_date(validation_dates[-1]) or "",
+    )
+
+
+def _split_purge_dates(
+    purge_dates: np.ndarray,
+    horizon_days: int,
+    embargo_days: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Split the removed dates into overlap purge vs embargo segments."""
+    overlap_count = max(horizon_days - 1, 0)
+    embargo_count = min(max(embargo_days, 0), len(purge_dates))
+    overlap_dates = purge_dates[:overlap_count]
+    embargo_dates = purge_dates[len(purge_dates) - embargo_count :] if embargo_count else np.array([], dtype=purge_dates.dtype)
+    return overlap_dates, embargo_dates
+
+
+def _build_purge_window_metadata(
+    purge_dates: np.ndarray,
+    horizon_days: int,
+    embargo_days: int,
+) -> PurgeWindowMetadata:
+    """Return readable purge/embargo date ranges for one split."""
+    overlap_dates, embargo_dates = _split_purge_dates(
+        purge_dates,
+        horizon_days=horizon_days,
+        embargo_days=embargo_days,
+    )
+    return PurgeWindowMetadata(
+        overlap_purge_start_date=_format_date(overlap_dates[0]) if len(overlap_dates) else None,
+        overlap_purge_end_date=_format_date(overlap_dates[-1]) if len(overlap_dates) else None,
+        embargo_start_date=_format_date(embargo_dates[0]) if len(embargo_dates) else None,
+        embargo_end_date=_format_date(embargo_dates[-1]) if len(embargo_dates) else None,
     )
 
 
@@ -135,15 +177,28 @@ def make_event_v1_splits(
             )
 
         fold_metadata = _build_metadata(train_dates, purge_dates, validation_dates)
+        purge_metadata = _build_purge_window_metadata(
+            purge_dates,
+            horizon_days=horizon_days,
+            embargo_days=embargo_days,
+        )
+        overlap_dates, embargo_dates = _split_purge_dates(
+            purge_dates,
+            horizon_days=horizon_days,
+            embargo_days=embargo_days,
+        )
         folds.append(
             {
                 "fold_number": fold_number,
                 "train_indices": _row_positions_for_dates(dates, train_dates),
                 "validation_indices": _row_positions_for_dates(dates, validation_dates),
                 "date_metadata": fold_metadata.__dict__,
+                "purge_window_metadata": purge_metadata.__dict__,
                 "train_date_count": int(len(train_dates)),
                 "validation_date_count": int(len(validation_dates)),
                 "purged_date_count": int(len(purge_dates)),
+                "overlap_purge_date_count": int(len(overlap_dates)),
+                "embargo_date_count": int(len(embargo_dates)),
             }
         )
 
@@ -151,6 +206,16 @@ def make_event_v1_splits(
     holdout_train_dates = pre_holdout_dates[:holdout_train_end_exclusive]
     holdout_purge_dates = pre_holdout_dates[holdout_train_end_exclusive:]
     holdout_metadata = _build_metadata(holdout_train_dates, holdout_purge_dates, holdout_dates)
+    holdout_purge_metadata = _build_purge_window_metadata(
+        holdout_purge_dates,
+        horizon_days=horizon_days,
+        embargo_days=embargo_days,
+    )
+    holdout_overlap_dates, holdout_embargo_dates = _split_purge_dates(
+        holdout_purge_dates,
+        horizon_days=horizon_days,
+        embargo_days=embargo_days,
+    )
 
     return {
         "date_column": date_col,
@@ -167,8 +232,11 @@ def make_event_v1_splits(
             "train_indices": _row_positions_for_dates(dates, holdout_train_dates),
             "holdout_indices": _row_positions_for_dates(dates, holdout_dates),
             "date_metadata": holdout_metadata.__dict__,
+            "purge_window_metadata": holdout_purge_metadata.__dict__,
             "train_date_count": int(len(holdout_train_dates)),
             "holdout_date_count": int(len(holdout_dates)),
             "purged_date_count": int(len(holdout_purge_dates)),
+            "overlap_purge_date_count": int(len(holdout_overlap_dates)),
+            "embargo_date_count": int(len(holdout_embargo_dates)),
         },
     }

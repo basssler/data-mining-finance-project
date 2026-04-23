@@ -116,6 +116,9 @@ random_seed:
   sklearn: 42
   xgboost: 42
 
+promotion:
+  strategy: stability_aware
+
 metadata:
   report_title: "Quarterly Stability Sentiment Capped Benchmark"
   label_description: "63-trading-day excess return sign"
@@ -131,3 +134,4 @@ outputs:
   markdown: reports/results/event_panel_v2_quarterly_stability_sentiment_capped_benchmark.md
   shap_plot: reports/results/event_panel_v2_quarterly_stability_sentiment_capped_shap_summary.png
   shap_csv: reports/results/event_panel_v2_quarterly_stability_sentiment_capped_shap_importance.csv
+  validation_dir: outputs/quarterly/validation/event_panel_v2_quarterly_stability_sentiment_capped

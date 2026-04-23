@@ -2,17 +2,17 @@
 
 ## Summary
 
-- Reference regime: CV AUC `0.5111`, holdout AUC `0.4210`.
-- Best ablation regime by holdout/CV ordering: `drop_top_shap_feature` with holdout AUC `0.4876`.
+- Baseline regime: `levels_only` with CV AUC `0.5060` and holdout AUC `0.4006`.
+- Best regime by holdout/CV ordering: `levels_plus_deltas_plus_cross_sectional` with holdout AUC `0.4647`.
 
 ## Regime Comparison
 
-| Regime | Added Exclusions | Model | CV AUC | CV Log Loss | Holdout AUC | Holdout Log Loss | Delta Holdout AUC | Top SHAP Feature |
-|---|---|---|---:|---:|---:|---:|---:|---|
-| drop_top_shap_feature | ["qfd_av_revision_x_surprise"] | xgboost | 0.5147 | 0.7844 | 0.4876 | 0.7894 | 0.0666 | qfd_av_latest_surprise_vs_trailing_pct |
-| drop_top_3_shap_features | ["qfd_av_revision_x_surprise", "qfd_av_latest_surprise_vs_trailing_pct", "av_trailing_4q_eps_surprise_pct_std"] | logistic_regression | 0.5123 | 0.7692 | 0.4727 | 0.7645 | 0.0517 | n/a |
-| full_reference | [] | xgboost | 0.5111 | 0.7850 | 0.4210 | 0.8218 | 0.0000 | qfd_av_revision_x_surprise |
+| Regime | Description | Added Exclusions | Model | CV AUC | CV Log Loss | Holdout AUC | Holdout Log Loss | Delta Holdout AUC | Top SHAP Feature |
+|---|---|---|---|---:|---:|---:|---:|---:|---|
+| levels_plus_deltas_plus_cross_sectional | Levels plus deltas plus sector-relative z-scores and percentile ranks. | [] | logistic_regression | 0.5047 | 0.7966 | 0.4647 | 0.8321 | 0.0642 | n/a |
+| levels_plus_deltas | Levels plus delta, acceleration, stability, and event-history transforms. | ["qfd_v2_accruals_ratio_zsec", "qfd_v2_debt_to_assets_d1_ranksec", "qfd_v2_debt_to_assets_zsec", "qfd_v2_operating_margin_d1_ranksec", "qfd_v2_operating_margin_d1_zsec", "qfd_v2_profitability_profile_score_ranksec", "qfd_v2_roa_zsec"] | logistic_regression | 0.5053 | 0.7976 | 0.4619 | 0.8316 | 0.0613 | n/a |
+| levels_only | Raw quarterly/accounting levels only. | ["qfd_av_estimate_breadth_mean", "qfd_av_latest_surprise_above_trailing_flag", "qfd_av_latest_surprise_vs_trailing_pct", "qfd_av_latest_surprise_vs_trailing_pct_abs", "qfd_av_latest_surprise_vs_trailing_pct_bucket", "qfd_av_revision_acceleration", "qfd_av_revision_breadth_pressure", "qfd_av_revision_direction_flag", "qfd_av_revision_magnitude_bucket", "qfd_av_revision_plus_surprise", "qfd_av_revision_pressure", "qfd_av_revision_surprise_same_sign_flag", "qfd_av_revision_x_growth_quality", "qfd_av_revision_x_surprise", "qfd_av_revision_x_surprise_capped", "qfd_av_surprise_consistency", "qfd_av_surprise_consistency_bucket", "qfd_av_surprise_pct_consistency", "qfd_av_surprise_x_financial_health", "qfd_av_trailing_surprise_pct_std_bucket", "qfd_av_trailing_surprise_pct_std_clipped", "qfd_delta_accruals_ratio", "qfd_delta_asset_turnover", "qfd_delta_earnings_growth_qoq", "qfd_delta_growth_quality_profile_score", "qfd_delta_liquidity_profile_score", "qfd_delta_net_margin", "qfd_delta_operating_margin", "qfd_delta_overall_financial_health_score", "qfd_delta_profitability_profile_score", "qfd_delta_revenue_growth_qoq", "qfd_delta_roa", "qfd_delta_solvency_profile_score", "qfd_event_gap_difference", "qfd_event_gap_ratio", "qfd_growth_delta_combo", "qfd_log_days_since_last_earnings_release", "qfd_log_days_since_prior_event", "qfd_log_days_since_prior_same_event_type", "qfd_margin_delta_combo", "qfd_prior_event_gap_bucket", "qfd_prior_same_type_gap_bucket", "qfd_profile_delta_combo", "qfd_short_cycle_flag", "qfd_short_same_type_cycle_flag", "qfd_v2_earnings_growth_yoy_accel", "qfd_v2_net_margin_accel", "qfd_v2_operating_margin_accel", "qfd_v2_revenue_growth_yoy_accel", "qfd_v2_accruals_ratio_zsec", "qfd_v2_debt_to_assets_d1_ranksec", "qfd_v2_debt_to_assets_zsec", "qfd_v2_operating_margin_d1_ranksec", "qfd_v2_operating_margin_d1_zsec", "qfd_v2_profitability_profile_score_ranksec", "qfd_v2_roa_zsec", "qfd_v2_accruals_ratio_d1", "qfd_v2_cfo_to_net_income_d1", "qfd_v2_cfo_to_net_income_d4", "qfd_v2_debt_to_assets_d1", "qfd_v2_earnings_growth_yoy_d4", "qfd_v2_gross_margin_d1", "qfd_v2_net_margin_d1", "qfd_v2_operating_margin_d1", "qfd_v2_revenue_growth_yoy_d4", "qfd_v2_roa_d1", "qfd_v2_working_capital_to_total_assets_d1", "qfd_v2_cfo_to_net_income_stb4q", "qfd_v2_earnings_growth_yoy_stb4q", "qfd_v2_net_margin_pos_count_stb4q", "qfd_v2_net_margin_stb4q", "qfd_v2_operating_margin_pos_count_stb4q", "qfd_v2_operating_margin_stb4q", "qfd_v2_revenue_growth_yoy_stb4q"] | logistic_regression | 0.5060 | 0.7518 | 0.4006 | 0.8319 | 0.0000 | n/a |
 
 ## Readout
 
-- Use this report to demote short-horizon proxy features only when retraining shows they do not support the 63-day holdout.
+- Use this ladder to isolate whether change-based and cross-sectional families improve the quarterly benchmark relative to raw levels.

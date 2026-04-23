@@ -1,105 +1,94 @@
 # Project Scope
 
 ## Project Title
-Sentiment-Augmented Financial Prediction
+Quarterly Event-Driven Excess-Return Classification
 
 ## Research Question
-Do sentiment-based features from financial news and SEC filings improve short-term stock price movement prediction beyond financial statement and market-based features?
+Can an event-driven quarterly filing panel predict the sign of 63-trading-day excess returns better than frozen daily baselines, and which quarterly feature families are stable enough to promote?
 
 ## Project Type
 Supervised learning classification project.
 
 ## Prediction Target
-Binary classification:
-- Label = 1 if 5-day forward return > 0
+Binary classification on the live quarterly label:
+- Label = 1 if `63`-trading-day excess return sign is positive
 - Label = 0 otherwise
+- Benchmark mode = `sector_equal_weight_ex_self`
 
 ## Unit of Observation
-One row = one stock on one date.
+One row = one quarterly filing event for one ticker.
 
-## Initial Universe
-30-40 Large cap S&P 500 companies from a single sector. 
-Why? focused sector subset allows for us better comparability of finance rations, keeps it manageable, and preserves the strong market coverage for later sentiment modeling. 
+## Canonical Universe
+`34` large-cap Consumer Staples names stored in `src/universe.py`.
+
+Why this remains canonical:
+- quarterly accounting features stay comparable within-sector
+- event timing stays auditable
+- the benchmark history remains reproducible across the same 2015-2024 window
 
 ## Time Horizon
 2015-2024
 
-## Feature Layers
-### Layer 1
-Financial statement features only
-Examples:
-- Current ratio
-- Debt-to-equity
-- Net margin
-- ROA
-- ROE
-- Revenue growth
-- Earnings growth
+## Current Feature Families
 
-### Layer 2
-Add market data features
-Examples:
-- 5-day return
-- 21-day return
-- rolling volatility
-- volume ratio
-- RSI
+### Baseline Quarterly Event Features
+- point-in-time accounting snapshot features
+- event timing fields
+- filing availability fields
 
-### Layer 3
-Add sentiment features
-Examples:
-- headline sentiment score
-- sentiment momentum
-- news volume
-- MD&A sentiment delta
+### Expanded Quarterly Design Features
+- accounting deltas and profile composites
+- Alpha Vantage earnings estimate and surprise features where coverage is available
+- selected quarterly interaction or additive stability features depending on config
+
+### Non-Canonical Families
+- short-horizon daily market controls are legacy or comparison-only
+- daily `5`-day label artifacts are preserved only for historical comparison
+- sentiment layers remain experimental and are not promoted
 
 ## Models to Compare
-### In-class
 - Logistic Regression
 - Random Forest
-- Bagging
-- Gradient Boosting / AdaBoost
-
-### Outside-class
-- Lasso / Ridge if used appropriately
 - XGBoost
 
 ## Validation Strategy
-Time-series split / walk-forward validation.
-No random split.
-Final holdout period reserved for out-of-sample testing.
+Purged expanding-window validation:
+- `5` folds
+- `5` embargo days
+- minimum training window = `252` dates
+- final holdout starts `2024-01-01`
+- no random split
 
 ## Evaluation Metrics
 - AUC-ROC
-- F1-score
-- Precision
-- Recall
 - Log loss
-- Confusion matrix
+- Precision / Recall
+- rank IC
+- worst-fold and concentration stability diagnostics for promotion review
 
 ## Deliverables
-- Clean merged modeling dataset
-- Baseline results for Layer 1
-- Comparison across Layers 1, 2, and 3
-- Tables/plots for presentation
-- Final report and slide deck
+- reproducible quarterly benchmark configs
+- quarterly benchmark registry and experiment log
+- checked-in benchmark CSV and markdown artifacts
+- quarterly diagnostics under `outputs/quarterly/`
+- frozen legacy daily comparator
 
 ## In Scope
-- Short-term stock direction prediction
-- Comparison of feature layers
-- Model evaluation
-- Interpretation of feature importance
+- quarterly event panel construction
+- label / validation / feature ladder comparisons
+- stability-aware benchmark promotion
+- preserving the daily benchmark only as a legacy baseline
 
 ## Out of Scope
-- Live trading
+- live trading
 - production deployment
-- perfect backtesting engine
-- portfolio optimization
-- real-time streaming pipeline
+- portfolio construction
+- real-time streaming
+- deleting the historical daily baseline
 
 ## MVP Definition
 The project is successful at minimum if:
-1. A clean dataset is built
-2. At least one baseline classifier is trained
-3. Results are evaluated correctly with time-aware validation
-4. Layer comparison is shown clearly
+1. a quarterly event panel is reproducible from checked-in configs
+2. the live target and validation scheme are unambiguous in repo docs
+3. the active quarterly candidate and frozen daily baseline are clearly separated
+4. a contributor can identify which quarterly run is baseline, comparison-only, or candidate

@@ -1,41 +1,64 @@
 prediction_horizons:
-  - 5
-  - 21
+  - 63
 universe:
-  name: wrds_large_cap_starter
-  description: Starter daily US large-cap universe for the WRDS stock-date pipeline.
+  name: event_panel_v2_consumer_staples_34
+  description: Canonical quarterly event workflow universe with one row per filing event.
   tickers:
-    - AAPL
-    - MSFT
-    - AMZN
-    - GOOGL
-    - META
-    - NVDA
-    - BRK.B
-    - JPM
-    - XOM
-    - UNH
+    - WMT
+    - COST
+    - PG
+    - KO
+    - PM
+    - MDLZ
+    - PEP
+    - MO
+    - CL
+    - TGT
+    - MNST
+    - KR
+    - KDP
+    - ADM
+    - SYY
+    - KMB
+    - HSY
+    - DG
+    - CHD
+    - STZ
+    - DLTR
+    - GIS
+    - KHC
+    - TSN
+    - EL
+    - BG
+    - CLX
+    - MKC
+    - SJM
+    - CAG
+    - TAP
+    - HRL
+    - BF-B
+    - CPB
 date_range:
   start: "2015-01-01"
   end: "2024-12-31"
-frequency: daily
+frequency: quarterly_event
 objective: binary_classification
 label_definition:
-  positive_class_rule: forward_return_greater_than_zero
-  negative_class_rule: forward_return_less_than_or_equal_to_zero
+  name: event_v2_63d_sign
+  benchmark_mode: sector_equal_weight_ex_self
+  positive_class_rule: 63_trading_day_excess_return_greater_than_zero
+  negative_class_rule: 63_trading_day_excess_return_less_than_or_equal_to_zero
 primary_id_fields:
-  - gvkey
-  - permno
   - ticker
-  - date
+  - event_date
+  - effective_model_date
+  - filing_type
 classification_fields:
   sector_field: gics_sector
   industry_field: gics_industry
 peer_groups:
-  - industry
   - sector
-  - size_bucket
-  - sector_x_size_bucket
+  - sector_equal_weight_ex_self
 validation:
   train_validation_start: "2015-01-01"
   train_validation_end: "2023-12-31"
@@ -44,9 +67,21 @@ validation:
   n_splits: 5
   gap_days: 5
   min_train_days: 252
+  scheme: purged_expanding_window
 paths:
-  raw_wrds_dir: data/raw/wrds
-  interim_wrds_dir: data/interim/wrds
+  raw_wrds_dir: data/raw
+  interim_wrds_dir: data/interim
   interim_feature_dir: data/interim/features
-  processed_dir: data/processed/stock_prediction
+  processed_dir: data/processed
   reports_dir: reports/results
+daily_workflow:
+  docs_dir: docs/daily
+  configs_dir: configs/daily
+  legacy_primary_config: configs/daily/legacy_event_panel_v2_primary.yaml
+quarterly_workflow:
+  manifest_path: configs/quarterly/experiments/benchmark_ladder.yaml
+  docs_dir: docs/quarterly
+  outputs_dir: outputs/quarterly
+  baseline_config: configs/event_panel_v2_quarterly.yaml
+  candidate_config: configs/event_panel_v2_quarterly_stability_core_additive.yaml
+  registry_doc: docs/quarterly/promoted_models.md

@@ -14,31 +14,17 @@ if __package__ is None or __package__ == "":
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
+from src.config_event_v1 import LAYER2_V2_FEATURE_COLUMNS
+from src.quarterly_feature_design import build_feature_family_map
 from src.train_event_panel_v2 import format_metric
 
 DEFAULT_BASE_CONFIG_PATH = Path("configs") / "event_panel_v2_quarterly_feature_design_sentiment.yaml"
 DEFAULT_OUTPUT_CSV_PATH = Path("reports") / "results" / "quarterly_feature_ablation.csv"
 DEFAULT_OUTPUT_MD_PATH = Path("reports") / "results" / "quarterly_feature_ablation.md"
-SHORT_HORIZON_FEATURES = [
-    "rel_return_5d",
-    "rel_return_10d",
-    "overnight_gap_1d",
-    "abs_return_shock_1d",
-    "volume_ratio_20d",
-    "log_volume",
-    "abnormal_volume_flag",
-]
-SUSPICIOUS_MEDIUM_FEATURES = [
-    "rel_return_21d",
-    "realized_vol_63d",
-    "vol_ratio_21d_63d",
-    "drawdown_21d",
-    "return_zscore_21d",
-]
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run quarterly feature ablations against the best redesign family.")
+    parser = argparse.ArgumentParser(description="Run family-based quarterly feature ablations.")
     parser.add_argument("--base-config", default=str(DEFAULT_BASE_CONFIG_PATH))
     parser.add_argument("--output-csv", default=str(DEFAULT_OUTPUT_CSV_PATH))
     parser.add_argument("--output-md", default=str(DEFAULT_OUTPUT_MD_PATH))
@@ -65,25 +51,45 @@ def selected_row(csv_path: Path) -> pd.Series:
     return selected.iloc[0]
 
 
-def build_regimes(base_config: dict, shap_features: list[str]) -> list[tuple[str, list[str]]]:
-    regimes: list[tuple[str, list[str]]] = [("full_reference", [])]
-    for feature in SHORT_HORIZON_FEATURES + SUSPICIOUS_MEDIUM_FEATURES:
-        if feature in shap_features and feature not in base_config["feature_exclusions"]["explicit"]:
-            regimes.append((f"drop_{feature}", [feature]))
-    if shap_features:
-        regimes.append(("drop_top_shap_feature", [shap_features[0]]))
-    if len(shap_features) >= 3:
-        regimes.append(("drop_top_3_shap_features", shap_features[:3]))
-    top_short_features = [
-        feature for feature in shap_features[:8] if feature in set(SHORT_HORIZON_FEATURES + SUSPICIOUS_MEDIUM_FEATURES)
+def build_regimes(base_config: dict) -> list[dict[str, object]]:
+    del base_config
+    family_map = build_feature_family_map()
+    event_aware_market_features = family_map.loc[
+        family_map["feature_family"].isin(["event_aware_market_pre_event", "event_aware_market_first_tradable"]),
+        "feature_name",
+    ].tolist()
+    generic_market_features = list(LAYER2_V2_FEATURE_COLUMNS)
+    regimes = [
+        {
+            "regime_name": "core_no_market",
+            "add_exclusions": event_aware_market_features + generic_market_features,
+            "remove_exclusions": [],
+            "description": "Quarterly core stack with both generic Layer 2 and event-aware market features excluded.",
+        },
+        {
+            "regime_name": "generic_market_only",
+            "add_exclusions": event_aware_market_features,
+            "remove_exclusions": generic_market_features,
+            "description": "Quarterly core stack plus the old generic Layer 2 market controls only.",
+        },
+        {
+            "regime_name": "event_aware_market_only",
+            "add_exclusions": generic_market_features,
+            "remove_exclusions": event_aware_market_features,
+            "description": "Quarterly core stack plus event-aware pre-event and first-tradable market features only.",
+        },
+        {
+            "regime_name": "generic_and_event_aware_market",
+            "add_exclusions": [],
+            "remove_exclusions": generic_market_features + event_aware_market_features,
+            "description": "Quarterly core stack plus both generic Layer 2 and event-aware market feature blocks.",
+        },
     ]
-    if top_short_features:
-        regimes.append(("drop_top_suspicious_cluster", top_short_features))
     return regimes
 
 
 def build_markdown(result_df: pd.DataFrame) -> str:
-    baseline = result_df.loc[result_df["regime_name"] == "full_reference"].iloc[0]
+    baseline = result_df.loc[result_df["regime_name"] == "core_no_market"].iloc[0]
     best = result_df.sort_values(
         ["holdout_auc", "cv_auc_mean", "cv_log_loss_mean"],
         ascending=[False, False, True],
@@ -93,13 +99,13 @@ def build_markdown(result_df: pd.DataFrame) -> str:
         "",
         "## Summary",
         "",
-        f"- Reference regime: CV AUC `{format_metric(baseline['cv_auc_mean'])}`, holdout AUC `{format_metric(baseline['holdout_auc'])}`.",
-        f"- Best ablation regime by holdout/CV ordering: `{best['regime_name']}` with holdout AUC `{format_metric(best['holdout_auc'])}`.",
+        f"- Baseline regime: `core_no_market` with CV AUC `{format_metric(baseline['cv_auc_mean'])}` and holdout AUC `{format_metric(baseline['holdout_auc'])}`.",
+        f"- Best regime by holdout/CV ordering: `{best['regime_name']}` with holdout AUC `{format_metric(best['holdout_auc'])}`.",
         "",
         "## Regime Comparison",
         "",
-        "| Regime | Added Exclusions | Model | CV AUC | CV Log Loss | Holdout AUC | Holdout Log Loss | Delta Holdout AUC | Top SHAP Feature |",
-        "|---|---|---|---:|---:|---:|---:|---:|---|",
+        "| Regime | Description | Added Exclusions | Removed Exclusions | Model | CV AUC | CV Log Loss | Holdout AUC | Holdout Log Loss | Delta Holdout AUC | Top SHAP Feature |",
+        "|---|---|---|---|---|---:|---:|---:|---:|---:|---|",
     ]
     for _, row in result_df.iterrows():
         lines.append(
@@ -107,13 +113,15 @@ def build_markdown(result_df: pd.DataFrame) -> str:
             + " | ".join(
                 [
                     str(row["regime_name"]),
+                    str(row["regime_description"]),
                     str(row["added_exclusions"]),
+                    str(row["removed_exclusions"]),
                     str(row["model_name"]),
                     format_metric(row["cv_auc_mean"]),
                     format_metric(row["cv_log_loss_mean"]),
                     format_metric(row["holdout_auc"]),
                     format_metric(row["holdout_log_loss"]),
-                    format_metric(row["holdout_auc_delta_vs_reference"]),
+                    format_metric(row["holdout_auc_delta_vs_core_no_market"]),
                     str(row["top_shap_feature"]),
                 ]
             )
@@ -121,7 +129,7 @@ def build_markdown(result_df: pd.DataFrame) -> str:
         )
     lines.extend(["", "## Readout", ""])
     lines.append(
-        "- Use this report to demote short-horizon proxy features only when retraining shows they do not support the 63-day holdout."
+        "- Use this ladder to test whether the new event-aware market block outperforms the old generic Layer 2 market set and whether combining them adds incremental signal."
     )
     return "\n".join(lines) + "\n"
 
@@ -135,17 +143,21 @@ def main() -> None:
     ensure_parent_dir(output_md_path)
 
     base_config = load_yaml(base_config_path)
-    base_shap_csv = Path(base_config["outputs"]["shap_csv"])
-    shap_features = pd.read_csv(base_shap_csv)["feature"].tolist()
-    regimes = build_regimes(base_config, shap_features)
-
     tmp_config_path = output_csv_path.with_suffix(".tmp.yaml")
     rows = []
-    for regime_name, additions in regimes:
+
+    family_map = build_feature_family_map()
+    family_map_path = output_csv_path.with_name(f"{output_csv_path.stem}_feature_family_map.csv")
+    family_map.to_csv(family_map_path, index=False)
+
+    for regime in build_regimes(base_config):
         config = load_yaml(base_config_path)
-        config["feature_exclusions"]["explicit"] = list(
-            dict.fromkeys(list(config["feature_exclusions"]["explicit"]) + additions)
-        )
+        regime_name = str(regime["regime_name"])
+        additions = list(regime["add_exclusions"])
+        removals = list(regime["remove_exclusions"])
+        description = str(regime["description"])
+        explicit_exclusions = [feature for feature in list(config["feature_exclusions"]["explicit"]) if feature not in removals]
+        config["feature_exclusions"]["explicit"] = list(dict.fromkeys(explicit_exclusions + additions))
         config["panel"]["name"] = f"{config['panel']['name']}_{regime_name}"
         config["metadata"]["report_title"] = f"{config['metadata']['report_title']} {regime_name}"
         config["outputs"]["csv"] = str(output_csv_path.parent / f"{regime_name}_benchmark.csv")
@@ -160,7 +172,9 @@ def main() -> None:
         rows.append(
             {
                 "regime_name": regime_name,
+                "regime_description": description,
                 "added_exclusions": json.dumps(additions),
+                "removed_exclusions": json.dumps(removals),
                 "model_name": selected["model_name"],
                 "cv_auc_mean": float(selected["cv_auc_mean"]),
                 "cv_log_loss_mean": float(selected["cv_log_loss_mean"]),
@@ -169,12 +183,13 @@ def main() -> None:
                 "top_shap_feature": str(top_shap_feature),
             }
         )
+
     if tmp_config_path.exists():
         tmp_config_path.unlink()
 
     result_df = pd.DataFrame(rows)
-    baseline = result_df.loc[result_df["regime_name"] == "full_reference"].iloc[0]
-    result_df["holdout_auc_delta_vs_reference"] = result_df["holdout_auc"] - float(baseline["holdout_auc"])
+    baseline = result_df.loc[result_df["regime_name"] == "core_no_market"].iloc[0]
+    result_df["holdout_auc_delta_vs_core_no_market"] = result_df["holdout_auc"] - float(baseline["holdout_auc"])
     result_df = result_df.sort_values(
         ["holdout_auc", "cv_auc_mean", "cv_log_loss_mean"],
         ascending=[False, False, True],
@@ -184,6 +199,7 @@ def main() -> None:
 
     print(f"Wrote quarterly feature ablation CSV to: {output_csv_path}")
     print(f"Wrote quarterly feature ablation Markdown to: {output_md_path}")
+    print(f"Wrote quarterly feature family map to: {family_map_path}")
 
 
 if __name__ == "__main__":

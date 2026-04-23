@@ -1,0 +1,13 @@
+feature_name,missing_pct,feature_family,feature_version,survives_selected_model,too_sparse_to_matter
+qfd_v3_total_debt_to_assets_d1,11.63210099188458,delta_refined,qfd_v3,True,False
+qfd_v3_net_margin_d1,12.623985572587918,delta_refined,qfd_v3,True,False
+qfd_v3_cfo_to_net_income_d1,16.140667267808837,delta_refined,qfd_v3,True,False
+qfd_v3_operating_margin_d1,17.763751127141568,delta_refined,qfd_v3,True,False
+qfd_v3_accruals_ratio_d1,19.29666366095581,delta_refined,qfd_v3,True,False
+qfd_v3_leverage_change_qoq_d1,19.56717763751127,delta_refined,qfd_v3,True,False
+qfd_v3_capex_intensity_d1,100.0,delta_refined,qfd_v3,False,True
+qfd_v3_free_cash_flow_margin_d1,100.0,delta_refined,qfd_v3,False,True
+qfd_v3_free_cash_flow_to_net_income_d1,100.0,delta_refined,qfd_v3,False,True
+qfd_v3_gross_margin_d1,100.0,delta_refined,qfd_v3,False,True
+qfd_v3_interest_coverage_d1,100.0,delta_refined,qfd_v3,False,True
+qfd_v3_shareholder_payout_ratio_d1,100.0,delta_refined,qfd_v3,False,True

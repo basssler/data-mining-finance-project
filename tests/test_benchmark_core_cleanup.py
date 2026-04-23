@@ -173,6 +173,12 @@ class BenchmarkCoreCleanupTests(unittest.TestCase):
         self.assertEqual(holdout["date_metadata"]["purge_start_date"], str(dates[293].date()))
         self.assertEqual(holdout["date_metadata"]["purge_end_date"], str(dates[359].date()))
         self.assertEqual(holdout["date_metadata"]["validation_start_date"], str(dates[360].date()))
+        self.assertEqual(first_fold["overlap_purge_date_count"], 62)
+        self.assertEqual(first_fold["embargo_date_count"], 5)
+        self.assertEqual(first_fold["purge_window_metadata"]["overlap_purge_start_date"], str(dates[185].date()))
+        self.assertEqual(first_fold["purge_window_metadata"]["overlap_purge_end_date"], str(dates[246].date()))
+        self.assertEqual(first_fold["purge_window_metadata"]["embargo_start_date"], str(dates[247].date()))
+        self.assertEqual(first_fold["purge_window_metadata"]["embargo_end_date"], str(dates[251].date()))
 
     def test_quarterly_benchmark_markdown_does_not_contain_5_day_label_text(self) -> None:
         markdown_path = Path("reports/results/event_panel_v2_quarterly_benchmark.md")

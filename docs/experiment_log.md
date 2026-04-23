@@ -1,7 +1,14 @@
 # Experiment Log
 
 ## Purpose
-Track every meaningful modeling run, data change, and decision.
+Historical cross-workflow archive of modeling runs, data changes, and decisions.
+
+## Repo State Note
+
+- Canonical live workflow: `docs/quarterly/experiment_log.md`
+- Canonical quarterly benchmark registry: `docs/quarterly/promoted_models.md`
+- Legacy daily baseline registry: `docs/daily/legacy_benchmark_registry.md`
+- This file remains the long-form archive so older daily and transition-era experiments stay preserved, but it is not the single source of truth for the live quarterly path.
 
 ---
 

@@ -5,9 +5,34 @@ import pandas as pd
 import yaml
 
 from src.quarterly_stability import build_family_view_summary, pick_best_stable_row
+from src.train_event_panel_v2 import choose_best_model_with_stability
 
 
 class QuarterlyStabilityTests(unittest.TestCase):
+    def test_choose_best_model_with_stability_prefers_worst_fold_then_dispersion(self) -> None:
+        best_model = choose_best_model_with_stability(
+            [
+                {
+                    "model_name": "xgboost",
+                    "worst_fold_auc": 0.44,
+                    "cv_auc_std": 0.06,
+                    "cv_auc_mean": 0.54,
+                    "cv_log_loss_mean": 0.77,
+                    "holdout_auc": 0.50,
+                },
+                {
+                    "model_name": "random_forest",
+                    "worst_fold_auc": 0.46,
+                    "cv_auc_std": 0.04,
+                    "cv_auc_mean": 0.52,
+                    "cv_log_loss_mean": 0.79,
+                    "holdout_auc": 0.49,
+                },
+            ]
+        )
+
+        self.assertEqual(best_model, "random_forest")
+
     def test_pick_best_stable_row_prefers_fold_survival_then_concentration(self) -> None:
         df = pd.DataFrame(
             [
@@ -109,6 +134,8 @@ class QuarterlyStabilityTests(unittest.TestCase):
                 metadata["interaction_style"],
                 {"raw_components", "additive", "capped", "bucketed"},
             )
+            self.assertEqual(config["promotion"]["strategy"], "stability_aware")
+            self.assertTrue(str(config["outputs"]["validation_dir"]).startswith("outputs/quarterly/validation/"))
 
         self.assertEqual(len(outputs), len(set(outputs)))
 

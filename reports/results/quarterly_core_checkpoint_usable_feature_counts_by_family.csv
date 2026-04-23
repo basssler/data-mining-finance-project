@@ -1,0 +1,4 @@
+benchmark_name,selected_model_name,usable_feature_count_last_fold,base_or_other,level,delta,delta_refined,legacy_delta,cross_sectional
+levels_only,logistic_regression,49,42,7,0.0,0.0,0.0,0.0
+levels_plus_deltas,logistic_regression,96,42,7,5.0,4.0,38.0,0.0
+levels_plus_deltas_plus_cross_sectional,xgboost,103,42,7,5.0,4.0,38.0,7.0

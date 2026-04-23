@@ -250,6 +250,14 @@ def evaluate_regime(
     holdout_prob = fitted_model.predict_proba(clipped_holdout[holdout_usable])[:, 1]
     holdout_metrics = evaluate_extended(clipped_holdout, holdout_prob, threshold=0.5)
     cv_summary = summarize_metric_dicts(fold_metrics)
+    worst_fold_auc = min(
+        (
+            float(metrics["auc_roc"])
+            for metrics in fold_metrics
+            if metrics.get("auc_roc") is not None
+        ),
+        default=None,
+    )
 
     holdout_importances = getattr(fitted_model.named_steps["model"], "feature_importances_", None)
     holdout_top_drivers = []
@@ -276,6 +284,7 @@ def evaluate_regime(
         "model_name": model_name,
         "cv_auc_mean": cv_summary.get("auc_roc_mean"),
         "cv_auc_std": cv_summary.get("auc_roc_std"),
+        "worst_fold_auc": worst_fold_auc,
         "cv_log_loss_mean": cv_summary.get("log_loss_mean"),
         "cv_log_loss_std": cv_summary.get("log_loss_std"),
         "cv_precision_mean": cv_summary.get("precision_mean"),

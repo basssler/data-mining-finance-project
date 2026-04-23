@@ -1,0 +1,137 @@
+panel:
+  path: data/interim/event_panel_v2_quarterly_feature_design.parquet
+  name: quarterly_final_core_confirmation_v1
+
+prices:
+  path: data/interim/prices/prices_with_labels.parquet
+
+label:
+  path: outputs/quarterly/labels/checkpoint_21d_excess_thresholded.parquet
+  variant_name: event_v2_21d_excess_threshold
+  horizon_days: 21
+  mode: sign
+  benchmark_mode: sector_equal_weight_ex_self
+
+holdout:
+  start: "2024-01-01"
+
+cv:
+  n_splits: 5
+  embargo_days: 5
+  min_train_dates: 252
+
+models:
+  - logistic_regression
+  - random_forest
+  - xgboost
+
+feature_inclusions:
+  additional:
+    - av_latest_prior_eps_surprise_before_event
+    - av_latest_prior_eps_surprise_pct_before_event
+    - av_trailing_4q_eps_surprise_mean
+    - av_trailing_4q_eps_surprise_std
+    - av_trailing_4q_eps_surprise_pct_mean
+    - av_trailing_4q_eps_surprise_pct_std
+    - av_trailing_4q_eps_beat_rate
+    - av_days_since_last_earnings_release
+    - av_latest_quarterly_eps_estimate_before_event
+    - av_latest_quarterly_revenue_estimate_before_event
+    - av_eps_estimate_analyst_count_before_event
+    - av_revenue_estimate_analyst_count_before_event
+    - av_eps_estimate_revision_30d
+    - av_eps_estimate_revision_90d
+    - qfd_delta_operating_margin
+    - qfd_delta_net_margin
+    - qfd_delta_roa
+    - qfd_delta_asset_turnover
+    - qfd_delta_revenue_growth_qoq
+    - qfd_delta_earnings_growth_qoq
+    - qfd_delta_accruals_ratio
+    - qfd_delta_liquidity_profile_score
+    - qfd_delta_solvency_profile_score
+    - qfd_delta_profitability_profile_score
+    - qfd_delta_growth_quality_profile_score
+    - qfd_delta_overall_financial_health_score
+    - qfd_margin_delta_combo
+    - qfd_growth_delta_combo
+    - qfd_profile_delta_combo
+    - qfd_av_surprise_consistency
+    - qfd_av_surprise_pct_consistency
+    - qfd_av_latest_surprise_vs_trailing_pct
+    - qfd_av_revision_pressure
+    - qfd_av_revision_acceleration
+    - qfd_av_revision_breadth_pressure
+    - qfd_av_estimate_breadth_mean
+    - qfd_av_revision_x_surprise
+    - qfd_av_revision_x_growth_quality
+    - qfd_av_surprise_x_financial_health
+    - qfd_log_days_since_last_earnings_release
+    - qfd_log_days_since_prior_event
+    - qfd_log_days_since_prior_same_event_type
+    - qfd_event_gap_ratio
+    - qfd_event_gap_difference
+    - qfd_short_cycle_flag
+    - qfd_short_same_type_cycle_flag
+
+feature_exclusions:
+  explicit:
+    - gross_margin
+    - current_filing_sentiment_available
+    - rel_return_5d
+    - rel_return_10d
+    - rel_return_21d
+    - realized_vol_21d
+    - realized_vol_63d
+    - vol_ratio_21d_63d
+    - beta_63d_to_sector
+    - overnight_gap_1d
+    - abs_return_shock_1d
+    - drawdown_21d
+    - return_zscore_21d
+    - volume_ratio_20d
+    - log_volume
+    - abnormal_volume_flag
+    - sec_sentiment_score
+    - sec_positive_prob
+    - sec_negative_prob
+    - sec_neutral_prob
+    - sec_sentiment_abs
+    - sec_sentiment_change_prev
+    - sec_positive_change_prev
+    - sec_negative_change_prev
+    - sec_chunk_count
+    - sec_log_chunk_count
+  auto_drop_all_missing: true
+  auto_drop_constant: true
+  max_missingness_pct: 20.0
+
+xgboost:
+  prefer_gpu_if_clean: true
+  fallback_to_cpu: true
+  note: "GPU is used only when the local stack supports clean CUDA prediction without the device-mismatch warning."
+
+random_seed:
+  python: 42
+  numpy: 42
+  sklearn: 42
+  xgboost: 42
+
+promotion:
+  strategy: stability_aware
+
+metadata:
+  report_title: "Quarterly Final Core Confirmation"
+  label_description: "21-trading-day thresholded excess return (+/-1.5%)"
+  panel_display_name: "quarterly_final_core_confirmation_v1"
+  setup_note: "Final quarterly-core confirmation run using the rescued levels_plus_deltas_plus_cross_sectional stack and the provisional 21d thresholded excess label."
+  interpretation_note: "Promote this quarterly core only if the thresholded-label gain is meaningful relative to both the prior excess-sign winner and the older default-label baseline."
+  experiment_family: "quarterly_final_core_confirmation"
+  design_note: "levels_plus_deltas_plus_cross_sectional__21d_excess_thresholded"
+
+outputs:
+  csv: reports/results/quarterly_final_core_confirmation_benchmark.csv
+  markdown: reports/results/quarterly_final_core_confirmation_benchmark.md
+  shap_plot: reports/results/quarterly_final_core_confirmation_shap_summary.png
+  shap_csv: reports/results/quarterly_final_core_confirmation_shap_importance.csv
+  validation_dir: outputs/quarterly/validation/quarterly_final_core_confirmation_v1

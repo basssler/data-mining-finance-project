@@ -72,6 +72,23 @@ feature_inclusions:
     - qfd_event_gap_difference
     - qfd_short_cycle_flag
     - qfd_short_same_type_cycle_flag
+    - qfd_es_filing_sentiment_score
+    - qfd_es_filing_positive_prob
+    - qfd_es_filing_negative_prob
+    - qfd_es_filing_neutral_prob
+    - qfd_es_filing_sentiment_abs
+    - qfd_es_filing_sentiment_delta_prev_q
+    - qfd_es_filing_positive_prob_delta_prev_q
+    - qfd_es_filing_negative_prob_delta_prev_q
+    - qfd_es_negative_tone_jump
+    - qfd_es_sentiment_surprise_vs_90d
+    - qfd_es_negative_surprise_vs_90d
+    - qfd_es_sentiment_uncertainty
+    - qfd_es_sentiment_entropy
+    - qfd_es_sentiment_polarity_balance
+    - qfd_es_source_count
+    - qfd_es_text_chunk_count
+    - qfd_es_log_text_chunk_count
 
 feature_exclusions:
   explicit:
@@ -113,17 +130,21 @@ random_seed:
   sklearn: 42
   xgboost: 42
 
+promotion:
+  strategy: stability_aware
+
 metadata:
   report_title: "Quarterly Feature Design Sentiment Benchmark"
   label_description: "63-trading-day excess return sign"
   panel_display_name: "event_panel_v2_quarterly_feature_design_sentiment"
-  setup_note: "This report adds filing-timed SEC sentiment probabilities onto the quarterly core family while keeping all market features excluded."
-  interpretation_note: "Promote this family only if the cleaner sentiment probability block adds 63-day signal without displacing the quarterly-thesis features as the main driver set."
+  setup_note: "This report adds an event-specific sentiment block built from event-tied filing text, prior-quarter deltas, 90-day surprise, uncertainty, and attention while keeping market features excluded."
+  interpretation_note: "Promote this family only if the event-specific sentiment block adds 63-day signal beyond the broad filing tone baseline without displacing the quarterly-thesis features as the main driver set."
   experiment_family: "quarterly_plus_sentiment"
-  design_note: "quarterly_core_plus_sentiment_probabilities"
+  design_note: "quarterly_core_plus_event_specific_sentiment"
 
 outputs:
   csv: reports/results/event_panel_v2_quarterly_feature_design_sentiment_benchmark.csv
   markdown: reports/results/event_panel_v2_quarterly_feature_design_sentiment_benchmark.md
   shap_plot: reports/results/event_panel_v2_quarterly_feature_design_sentiment_shap_summary.png
   shap_csv: reports/results/event_panel_v2_quarterly_feature_design_sentiment_shap_importance.csv
+  validation_dir: outputs/quarterly/validation/event_panel_v2_quarterly_feature_design_sentiment

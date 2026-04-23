@@ -1,0 +1,4 @@
+regime_name,selected_model_name,cv_auc_mean,cv_auc_std,worst_fold_auc,holdout_auc,usable_feature_count_last_fold
+levels_only,logistic_regression,0.5060058438286053,0.0154875005550021,0.4846656611362493,0.40056134723336,50
+levels_plus_deltas,logistic_regression,0.5053044225843752,0.0452608868848212,0.4522373051784817,0.4619085805934242,93
+levels_plus_deltas_plus_cross_sectional,logistic_regression,0.504714790275817,0.0442920012312971,0.4519859225741578,0.4647153167602245,96

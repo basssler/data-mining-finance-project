@@ -178,6 +178,7 @@ def build_clean_fundamentals_artifact(raw_df: pd.DataFrame) -> pd.DataFrame:
     concept_wide_df = fundamentals_clean.pivot_concepts_to_wide(concept_deduped_df)
     final_df = fundamentals_clean.combine_metadata_and_concepts(metadata_df, concept_wide_df)
     fundamentals_clean.save_clean_fundamentals(final_df, UNIVERSE_V2_CLEAN_FUNDAMENTALS_PATH)
+    fundamentals_clean.save_coverage_diagnostics(concept_deduped_df, final_df)
     fundamentals_clean.print_data_quality_summary(
         df=final_df,
         concept_dedup_removed=concept_dedup_removed,
@@ -191,6 +192,7 @@ def build_layer1_feature_artifact(clean_df: pd.DataFrame) -> pd.DataFrame:
     normalized_df = feature_engineering.normalize_input_data(clean_df)
     feature_df = feature_engineering.engineer_features(normalized_df)
     feature_engineering.save_features(feature_df, UNIVERSE_V2_LAYER1_FEATURES_PATH)
+    feature_engineering.save_unlocked_feature_feasibility_report(feature_df)
     feature_engineering.print_feature_summary(feature_df)
     return feature_df
 

@@ -10,11 +10,11 @@
 
 ## Per-Model Results
 
-| Model | Mean CV AUC | Mean CV Log Loss | Holdout AUC | Holdout Log Loss | Holdout Precision | Holdout Recall | Holdout Rank IC | XGBoost Backend | Selected Primary |
-|---|---:|---:|---:|---:|---:|---:|---:|---|---|
-| logistic_regression | 0.4998 | 0.7740 | 0.4623 | 0.7826 | 0.5385 | 0.3621 | -0.0845 | cpu |  |
-| random_forest | 0.5058 | 0.6975 | 0.4399 | 0.7165 | 0.5161 | 0.2759 | -0.1235 | cpu |  |
-| xgboost | 0.5262 | 0.7712 | 0.4880 | 0.8086 | 0.5641 | 0.3793 | -0.0101 | cpu | yes |
+| Model | Mean CV AUC | CV AUC Std | Worst Fold AUC | Holdout AUC | Holdout Log Loss | Holdout Precision | Holdout Recall | Holdout Rank IC | XGBoost Backend | Selected Primary |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
+| logistic_regression | 0.4998 | 0.0231 | 0.4724 | 0.4623 | 0.7826 | 0.5385 | 0.3621 | -0.0845 | cpu |  |
+| random_forest | 0.5058 | 0.0495 | 0.4209 | 0.4399 | 0.7165 | 0.5161 | 0.2759 | -0.1235 | cpu |  |
+| xgboost | 0.5262 | 0.0397 | 0.4735 | 0.4880 | 0.8086 | 0.5641 | 0.3793 | -0.0101 | cpu | yes |
 
 ## Feature Exclusions
 
@@ -25,8 +25,10 @@
 ## Selected Primary Model
 
 - Selected model: `xgboost`
+- Promotion strategy: `stability_aware`
 - Mean CV AUC: `0.5262`
-- Mean CV log loss: `0.7712`
+- CV AUC std: `0.0397`
+- Worst fold AUC: `0.4735`
 - 2024 holdout AUC: `0.4880`
 - 2024 holdout log loss: `0.8086`
 

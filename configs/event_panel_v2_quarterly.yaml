@@ -1,11 +1,12 @@
 panel:
-  path: data/interim/event_panel_v2.parquet
+  path: outputs/quarterly/panels/quarterly_event_panel_features.parquet
   name: event_panel_v2_quarterly
 
 label:
-  variant_name: event_v2_63d_sign
-  horizon_days: 63
+  variant_name: event_v2_21d_excess_sign
+  horizon_days: 21
   mode: sign
+  path: outputs/quarterly/labels/label_map_excess_21d.parquet
   benchmark_mode: sector_equal_weight_ex_self
 
 holdout:
@@ -40,12 +41,16 @@ random_seed:
   sklearn: 42
   xgboost: 42
 
+promotion:
+  strategy: stability_aware
+
 metadata:
   report_title: Event Panel V2 Quarterly Benchmark
-  label_description: 63-trading-day excess return sign
+  label_description: 21-trading-day excess return sign
 
 outputs:
   csv: reports/results/event_panel_v2_quarterly_benchmark.csv
   markdown: reports/results/event_panel_v2_quarterly_benchmark.md
   shap_plot: reports/results/event_panel_v2_quarterly_shap_summary.png
   shap_csv: reports/results/event_panel_v2_quarterly_shap_importance.csv
+  validation_dir: outputs/quarterly/validation
