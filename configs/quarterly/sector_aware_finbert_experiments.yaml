@@ -1,0 +1,64 @@
+workflow_name: sector_aware_finbert_quarterly_experiment
+unit_of_observation: one quarterly filing event
+paper_reference: "Cristescu, Brandas, Mara, & Ioana (2025), Electronics 14(23), 4680"
+implementation_status: feature_engineering_ready
+notes:
+  - "Do not interpret these experiments as a claim that FinBERT predicts stocks."
+  - "Sector-aware FinBERT is tested as a sentiment measurement-quality improvement."
+  - "News features must be built with news_date strictly before the event prediction date."
+
+feature_columns:
+  zero_shot_finbert_sentiment:
+    - sent_mean_7d
+    - sent_mean_30d
+    - sent_mean_63d
+    - sent_vol_30d
+    - sent_vol_63d
+    - news_count_7d
+    - news_count_30d
+    - news_count_63d
+    - sent_momentum_7v30
+    - sent_momentum_30v63
+    - confidence_mean_30d
+    - has_news_7d
+    - has_news_30d
+    - has_news_63d
+    - low_news_coverage_30d
+    - low_news_coverage_63d
+  sector_context_finbert_sentiment:
+    - sector_sent_mean_30d
+    - sector_sent_mean_63d
+    - sector_news_count_30d
+    - sector_news_count_63d
+  sector_adjusted_finbert_sentiment:
+    - sector_adj_sent_30d
+    - sector_adj_sent_63d
+    - sector_adj_news_share_30d
+    - sector_adj_news_share_63d
+
+comparison:
+  - experiment_family: quarterly_core
+    title: "Quarterly core"
+    config_path: configs/event_panel_v2_quarterly_feature_design_core.yaml
+    added_feature_blocks: []
+  - experiment_family: quarterly_core_plus_market
+    title: "Quarterly core + market"
+    config_path: configs/event_panel_v2_quarterly_feature_design_medium_market.yaml
+    added_feature_blocks:
+      - event_aware_market
+  - experiment_family: quarterly_plus_sentiment_zero_shot
+    title: "Quarterly core + market + zero-shot FinBERT sentiment"
+    base_config_path: configs/event_panel_v2_quarterly_feature_design_medium_market.yaml
+    added_feature_blocks:
+      - zero_shot_finbert_sentiment
+  - experiment_family: quarterly_plus_sector_adjusted_sentiment
+    title: "Quarterly core + market + sector-adjusted FinBERT sentiment"
+    base_config_path: configs/event_panel_v2_quarterly_feature_design_medium_market.yaml
+    added_feature_blocks:
+      - zero_shot_finbert_sentiment
+      - sector_context_finbert_sentiment
+      - sector_adjusted_finbert_sentiment
+
+diagnostics:
+  markdown_path: outputs/quarterly/diagnostics/sector_sentiment_feature_diagnostics.md
+  sparse_coverage_warning_threshold: 0.20

@@ -54,6 +54,7 @@ from src.config_event_v1 import PRICE_INPUT_PATH
 
 DEFAULT_CONFIG_PATH = Path("configs") / "event_panel_v2_primary.yaml"
 OLD_BASELINE_METRICS_PATH = Path("reports") / "results" / "event_v1_layer1_metrics.json"
+DEFAULT_PRIMARY_MODEL_MAX_HOLDOUT_AUC_LAG = 0.02
 
 
 def parse_args() -> argparse.Namespace:
@@ -198,9 +199,41 @@ def resolve_report_metadata(config: dict) -> dict[str, str]:
     }
 
 
-def choose_best_model_with_stability(model_records: list[dict]) -> str:
+def filter_models_by_holdout_gate(
+    model_records: list[dict],
+    max_holdout_auc_lag: float = DEFAULT_PRIMARY_MODEL_MAX_HOLDOUT_AUC_LAG,
+) -> list[dict]:
+    """Keep only models whose holdout AUC is close enough to the best holdout model.
+
+    Cross-validation stability is useful for tie-breaking, but it should not allow a
+    model with materially failed out-of-time holdout performance to become primary.
+    """
+    holdout_values = [
+        float(record["holdout_auc"])
+        for record in model_records
+        if record.get("holdout_auc") is not None and not pd.isna(record.get("holdout_auc"))
+    ]
+    if not holdout_values:
+        return list(model_records)
+    best_holdout_auc = max(holdout_values)
+    cutoff = best_holdout_auc - float(max_holdout_auc_lag)
+    eligible = [
+        record
+        for record in model_records
+        if record.get("holdout_auc") is not None
+        and not pd.isna(record.get("holdout_auc"))
+        and float(record["holdout_auc"]) >= cutoff
+    ]
+    return eligible if eligible else list(model_records)
+
+
+def choose_best_model_with_stability(
+    model_records: list[dict],
+    max_holdout_auc_lag: float = DEFAULT_PRIMARY_MODEL_MAX_HOLDOUT_AUC_LAG,
+) -> str:
+    eligible_records = filter_models_by_holdout_gate(model_records, max_holdout_auc_lag=max_holdout_auc_lag)
     ranked = []
-    for record in model_records:
+    for record in eligible_records:
         ranked.append(
             (
                 -(record.get("worst_fold_auc") if record.get("worst_fold_auc") is not None else float("-inf")),
@@ -217,6 +250,15 @@ def choose_best_model_with_stability(model_records: list[dict]) -> str:
 
 def resolve_threshold(config: dict) -> float:
     return float(config.get("scoring", {}).get("threshold", 0.5))
+
+
+def resolve_primary_model_max_holdout_auc_lag(config: dict) -> float:
+    return float(
+        config.get("promotion", {}).get(
+            "primary_model_max_holdout_auc_lag",
+            DEFAULT_PRIMARY_MODEL_MAX_HOLDOUT_AUC_LAG,
+        )
+    )
 
 
 def resolve_tuning_output_dir(config: dict) -> Path:
@@ -951,11 +993,26 @@ def run_model_matrix(
         concentration_rows.extend(model_concentration_rows)
 
     result_df = pd.DataFrame(rows).sort_values("model_name").reset_index(drop=True)
+    primary_model_max_holdout_auc_lag = resolve_primary_model_max_holdout_auc_lag(config)
+    model_records = result_df.to_dict(orient="records")
+    eligible_model_records = filter_models_by_holdout_gate(
+        model_records,
+        max_holdout_auc_lag=primary_model_max_holdout_auc_lag,
+    )
     if promotion_strategy == "stability_aware":
-        best_model_name = choose_best_model_with_stability(result_df.to_dict(orient="records"))
+        best_model_name = choose_best_model_with_stability(
+            eligible_model_records,
+            max_holdout_auc_lag=primary_model_max_holdout_auc_lag,
+        )
     else:
-        best_model_name = choose_best_model(result_df.to_dict(orient="records"))
+        best_model_name = choose_best_model(eligible_model_records)
     result_df["is_selected_primary_model"] = result_df["model_name"] == best_model_name
+    best_holdout_auc = result_df["holdout_auc"].max()
+    holdout_cutoff = best_holdout_auc - primary_model_max_holdout_auc_lag
+    result_df["primary_model_holdout_gate_cutoff"] = holdout_cutoff
+    result_df["primary_model_holdout_gate_pass"] = pd.to_numeric(result_df["holdout_auc"], errors="coerce").ge(
+        holdout_cutoff
+    )
     selected_row = result_df.loc[result_df["is_selected_primary_model"]].iloc[0].to_dict()
     promotion_cfg = config.get("promotion", {}) or {}
     holdout_delta_required = float(promotion_cfg.get("min_holdout_auc_delta", 0.0))

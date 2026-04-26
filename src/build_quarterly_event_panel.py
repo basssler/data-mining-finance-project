@@ -36,6 +36,8 @@ from src.panel_builder_event_v2 import (
 from src.paths import QUARTERLY_OUTPUTS_DIAGNOSTICS_DIR, QUARTERLY_OUTPUTS_PANELS_DIR
 from src.project_config import ensure_stock_prediction_directories
 from src.universe import get_project_sector_map
+from src.capitaliq_universe import DEFAULT_OUTPUT_PATH as CAPITALIQ_COMPANY_UNIVERSE_PATH
+from src.capitaliq_universe import derive_industry_from_classification, normalize_cik
 
 RAW_EVENT_MASTER_PATH = QUARTERLY_OUTPUTS_PANELS_DIR / "quarterly_event_master_raw.parquet"
 FILTERED_EVENT_MASTER_PATH = QUARTERLY_OUTPUTS_PANELS_DIR / "quarterly_event_master.parquet"
@@ -54,6 +56,7 @@ SESSION_OPEN_MINUTE_OF_DAY = TRADABLE_SESSION_OPEN_HOUR * 60 + TRADABLE_SESSION_
 SESSION_CLOSE_MINUTE_OF_DAY = 16 * 60
 DEFAULT_LABEL_VERSION = "event_v2_63d_sign"
 DEFAULT_FEATURE_VERSION = "quarterly_event_panel_v1"
+CAPITALIQ_METADATA_COLUMNS = ["company_name", "sector", "industry", "primary_exchange", "cik_resolved"]
 
 MODELING_METADATA_COLUMNS = [
     "event_id",
@@ -204,6 +207,91 @@ def _build_period_lookup(fundamentals_df: pd.DataFrame) -> pd.DataFrame:
     return lookup
 
 
+def load_capitaliq_company_metadata(path: Path = CAPITALIQ_COMPANY_UNIVERSE_PATH) -> pd.DataFrame:
+    """Load optional Capital IQ metadata without making the quarterly pipeline depend on it."""
+    if not Path(path).exists():
+        return pd.DataFrame(
+            columns=["ticker", "cik_resolved", "company_name", "sector", "industry", "primary_exchange"]
+        )
+    universe_df = pd.read_parquet(path)
+    metadata = universe_df.copy()
+    metadata["ticker"] = metadata["ticker"].astype("string").str.upper().str.strip()
+    metadata["cik_resolved"] = metadata["cik_resolved"].map(normalize_cik).astype("string")
+    metadata["industry"] = [
+        derive_industry_from_classification(industry, sector)
+        for industry, sector in zip(metadata.get("industry_classification_raw"), metadata.get("sector"))
+    ]
+    keep_columns = ["ticker", "cik_resolved", "company_name", "sector", "industry", "primary_exchange"]
+    metadata = metadata[[column for column in keep_columns if column in metadata.columns]].copy()
+    metadata = metadata.dropna(subset=["ticker"], how="all").copy()
+    metadata = metadata.sort_values(["ticker", "company_name"], na_position="last")
+    return metadata.drop_duplicates(subset=["ticker"], keep="first").reset_index(drop=True)
+
+
+def merge_capitaliq_metadata(panel_df: pd.DataFrame, metadata_df: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Attach Capital IQ company metadata by ticker, then by CIK for still-unmatched rows.
+
+    The Capital IQ latest market cap is intentionally excluded from this merge because
+    it is point-in-time unsafe as a historical modeling feature.
+    """
+    if metadata_df is None:
+        metadata_df = load_capitaliq_company_metadata()
+    if metadata_df.empty:
+        return panel_df.copy()
+
+    prepared = panel_df.copy()
+    prepared["ticker"] = prepared["ticker"].astype("string").str.upper().str.strip()
+    if "cik" in prepared.columns:
+        prepared["_capitaliq_join_cik"] = prepared["cik"].map(normalize_cik).astype("string")
+
+    metadata = metadata_df.copy()
+    metadata["ticker"] = metadata["ticker"].astype("string").str.upper().str.strip()
+    metadata["cik_resolved"] = metadata["cik_resolved"].map(normalize_cik).astype("string")
+    ticker_lookup = metadata.drop_duplicates(subset=["ticker"], keep="first").add_prefix("_capitaliq_")
+    merged = prepared.merge(
+        ticker_lookup,
+        left_on="ticker",
+        right_on="_capitaliq_ticker",
+        how="left",
+        validate="many_to_one",
+    )
+
+    if "_capitaliq_join_cik" in merged.columns:
+        cik_lookup = (
+            metadata.dropna(subset=["cik_resolved"])
+            .drop_duplicates(subset=["cik_resolved"], keep="first")
+            .add_prefix("_capitaliq_cik_")
+        )
+        unmatched = merged["_capitaliq_company_name"].isna() if "_capitaliq_company_name" in merged.columns else pd.Series(True, index=merged.index)
+        if unmatched.any() and not cik_lookup.empty:
+            fallback = merged.loc[unmatched, ["_capitaliq_join_cik"]].merge(
+                cik_lookup,
+                left_on="_capitaliq_join_cik",
+                right_on="_capitaliq_cik_cik_resolved",
+                how="left",
+                validate="many_to_one",
+            )
+            for column in CAPITALIQ_METADATA_COLUMNS:
+                ticker_column = f"_capitaliq_{column}"
+                cik_column = f"_capitaliq_cik_{column}"
+                if ticker_column in merged.columns and cik_column in fallback.columns:
+                    merged.loc[unmatched, ticker_column] = merged.loc[unmatched, ticker_column].fillna(
+                        pd.Series(fallback[cik_column].to_numpy(), index=merged.index[unmatched])
+                    )
+
+    for column in CAPITALIQ_METADATA_COLUMNS:
+        source_column = f"_capitaliq_{column}"
+        if source_column not in merged.columns:
+            continue
+        if column in merged.columns:
+            merged[column] = merged[source_column].combine_first(merged[column]).astype("string")
+        else:
+            merged[column] = merged[source_column].astype("string")
+
+    drop_columns = [column for column in merged.columns if column.startswith("_capitaliq_")]
+    return merged.drop(columns=drop_columns, errors="ignore")
+
+
 def build_raw_event_master(
     event_source_path: Path,
     price_path: Path,
@@ -272,6 +360,7 @@ def build_raw_event_master(
     master_df["validation_group"] = _build_validation_group(master_df["tradable_date"])
     master_df["sector"] = master_df["ticker"].map(sector_map).astype("string")
     master_df["industry"] = pd.Series("unknown", index=master_df.index, dtype="string")
+    master_df = merge_capitaliq_metadata(master_df)
     master_df["promotion_status"] = "raw"
     master_df["promotion_reason"] = "unfiltered"
 
@@ -451,14 +540,19 @@ def enrich_feature_panel(
         "validation_group",
         "sector",
         "industry",
+        "company_name",
+        "primary_exchange",
+        "cik_resolved",
         "promotion_reason",
     ]
+    join_columns = [column for column in join_columns if column in filtered_master_df.columns]
     lookup = filtered_master_df[join_columns].rename(columns={"source_file_id": "source_id"}).copy()
     enriched = panel_df.merge(
         lookup,
         on=["ticker", "event_type", "source_id"],
         how="left",
         validate="one_to_one",
+        suffixes=("", "_capitaliq_master"),
     )
     if enriched["event_id"].isna().any():
         missing = enriched.loc[enriched["event_id"].isna(), ["ticker", "event_type", "source_id"]]
@@ -471,9 +565,14 @@ def enrich_feature_panel(
     enriched["fiscal_period"] = enriched["event_fiscal_period"].astype("string")
     enriched["period_end"] = pd.to_datetime(enriched["event_period_end"], errors="coerce")
     enriched["source_file_id"] = enriched["source_id"].astype("string")
+    if "company_name_capitaliq_master" in enriched.columns:
+        enriched["company_name"] = enriched["company_name_capitaliq_master"].combine_first(enriched["company_name"]).astype("string")
+        enriched = enriched.drop(columns=["company_name_capitaliq_master"])
     ordered_columns = MODELING_METADATA_COLUMNS + [
         "promotion_reason",
         "company_name",
+        "primary_exchange",
+        "cik_resolved",
         "effective_model_date",
         "timing_bucket",
         "source_id",

@@ -5,7 +5,7 @@ import pandas as pd
 import yaml
 
 from src.quarterly_stability import build_family_view_summary, pick_best_stable_row
-from src.train_event_panel_v2 import choose_best_model_with_stability
+from src.train_event_panel_v2 import choose_best_model_with_stability, filter_models_by_holdout_gate
 
 
 class QuarterlyStabilityTests(unittest.TestCase):
@@ -31,6 +31,40 @@ class QuarterlyStabilityTests(unittest.TestCase):
             ]
         )
 
+        self.assertEqual(best_model, "random_forest")
+
+    def test_choose_best_model_with_stability_rejects_material_holdout_lag(self) -> None:
+        records = [
+            {
+                "model_name": "logistic_regression",
+                "worst_fold_auc": 0.56,
+                "cv_auc_std": 0.01,
+                "cv_auc_mean": 0.5726,
+                "cv_log_loss_mean": 0.70,
+                "holdout_auc": 0.4135,
+            },
+            {
+                "model_name": "random_forest",
+                "worst_fold_auc": 0.46,
+                "cv_auc_std": 0.04,
+                "cv_auc_mean": 0.5162,
+                "cv_log_loss_mean": 0.79,
+                "holdout_auc": 0.5367,
+            },
+            {
+                "model_name": "catboost",
+                "worst_fold_auc": 0.45,
+                "cv_auc_std": 0.04,
+                "cv_auc_mean": 0.5598,
+                "cv_log_loss_mean": 0.78,
+                "holdout_auc": 0.5348,
+            },
+        ]
+
+        eligible = filter_models_by_holdout_gate(records, max_holdout_auc_lag=0.02)
+        best_model = choose_best_model_with_stability(records, max_holdout_auc_lag=0.02)
+
+        self.assertNotIn("logistic_regression", [record["model_name"] for record in eligible])
         self.assertEqual(best_model, "random_forest")
 
     def test_pick_best_stable_row_prefers_fold_survival_then_concentration(self) -> None:

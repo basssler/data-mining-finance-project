@@ -18,6 +18,7 @@ from src.panel_builder import prepare_prices
 from src.paths import INTERIM_DATA_DIR
 from src.paths import QUARTERLY_OUTPUTS_DIAGNOSTICS_DIR
 from src.pipeline_utils import write_missingness_report
+from src.build_quarterly_event_panel import merge_capitaliq_metadata
 from src.quarterly_feature_design import (
     QUARTERLY_FEATURE_COLUMNS,
     build_event_aware_market_feature_group_map,
@@ -82,8 +83,15 @@ def main() -> None:
         panel_name="event_panel_v2_quarterly_feature_design input panel",
         allowed_extra_prefixes=("av_",),
     )
+    panel_df = merge_capitaliq_metadata(panel_df)
 
     enriched = build_quarterly_feature_design_panel(panel_df, price_df=price_df)
+    allowed_output_columns = (
+        set(canonical_columns)
+        | {column for column in enriched.columns if column.startswith("av_")}
+        | {column for column in enriched.columns if column.startswith("qfd_")}
+    )
+    enriched = enriched[[column for column in enriched.columns if column in allowed_output_columns]].copy()
     assert_matches_canonical_base_contract(
         enriched,
         panel_name="event_panel_v2_quarterly_feature_design output panel",

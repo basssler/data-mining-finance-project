@@ -1,23 +1,22 @@
-# Quarterly Tuned Model Upgrade
+# Quarterly Tuned Model Upgrade Pass 2
 
 ## Locked Setup
 
-- Primary panel: `quarterly_tuned_model_upgrade_v1`
+- Primary panel: `quarterly_tuned_model_upgrade_pass2_v1`
 - Primary label: `21-trading-day thresholded excess return (+/-1.5%)`
-- Models: `catboost`, `hist_gradient_boosting`, `lightgbm`, `logistic_regression`, `random_forest`, `xgboost`
+- Models: `catboost`, `hist_gradient_boosting`, `logistic_regression`, `random_forest`, `xgboost`
 - 2024 holdout policy: unchanged
-- Baseline keepers stay in the matrix while XGBoost, LightGBM, and CatBoost are tuned under the same purged quarterly evaluation policy.
+- Second-pass retune focused on the only nonlinear candidates worth more search budget after the first benchmark run.
 
 ## Per-Model Results
 
 | Model | Mean CV AUC | CV AUC Std | Worst Fold AUC | Holdout AUC | Holdout Log Loss | Holdout Rank IC | Backend | Dominant Feature | Concentration | Repro Holdout Std | Promotion |
 |---|---:|---:|---:|---:|---:|---:|---|---|---:|---:|---|
-| catboost | 0.5598 | 0.0773 | 0.4364 | 0.5348 | 0.8572 | 0.1015 | cuda | qfd_es_filing_negative_prob_delta_prev_q | 0.5000 | 0.0299 | reference_only |
+| catboost | 0.5436 | 0.0542 | 0.4439 | 0.4342 | 0.8110 | -0.0934 | cuda | earnings_growth_qoq | 0.3333 | 0.0369 | reference_only |
 | hist_gradient_boosting | 0.5222 | 0.0751 | 0.3811 | 0.5019 | 0.8834 | 0.0184 | cpu | days_since_prior_event | 0.3333 | 0.0000 | reference_only |
-| lightgbm | 0.5115 | 0.0220 | 0.4689 | 0.5310 | 0.7431 | 0.1086 | cpu | cash_ratio | 0.3333 | 0.0058 | reference_only |
-| logistic_regression | 0.5726 | 0.0662 | 0.4879 | 0.4135 | 1.3732 | -0.1080 | cpu | qfd_es_sentiment_entropy | 0.6667 | 0.0000 | candidate_only |
-| random_forest | 0.5162 | 0.0373 | 0.4576 | 0.5367 | 0.7026 | 0.0571 | cpu | qfd_av_surprise_pct_consistency | 0.8333 | 0.0138 | reference_only |
-| xgboost | 0.5426 | 0.0575 | 0.4598 | 0.4417 | 0.9303 | -0.0894 | cuda | qfd_es_log_text_chunk_count | 0.3333 | 0.0134 | reference_only |
+| logistic_regression | 0.5726 | 0.0662 | 0.4879 | 0.4135 | 1.3732 | -0.1080 | cpu | qfd_es_sentiment_entropy | 0.6667 | 0.0000 | reference_only |
+| random_forest | 0.5162 | 0.0373 | 0.4576 | 0.5367 | 0.7026 | 0.0571 | cpu | qfd_av_surprise_pct_consistency | 0.8333 | 0.0138 | candidate_only |
+| xgboost | 0.5471 | 0.0654 | 0.4583 | 0.4934 | 0.7411 | 0.0177 | cuda | av_trailing_4q_eps_surprise_pct_mean | 0.3333 | 0.0104 | reference_only |
 
 ## Feature Exclusions
 
@@ -27,20 +26,20 @@
 
 ## Selected Primary Model
 
-- Selected model: `logistic_regression`
+- Selected model: `random_forest`
 - Promotion strategy: `stability_aware`
-- Mean CV AUC: `0.5726`
-- CV AUC std: `0.0662`
-- Worst fold AUC: `0.4879`
-- 2024 holdout AUC: `0.4135`
-- 2024 holdout log loss: `1.3732`
-- Dominant feature concentration: `0.6667`
-- Reproducibility holdout AUC std: `0.0000`
+- Mean CV AUC: `0.5162`
+- CV AUC std: `0.0373`
+- Worst fold AUC: `0.4576`
+- 2024 holdout AUC: `0.5367`
+- 2024 holdout log loss: `0.7026`
+- Dominant feature concentration: `0.8333`
+- Reproducibility holdout AUC std: `0.0138`
 - Promotion status: `candidate_only`
-- Promotion reason: `holdout_not_better_than_reference`
+- Promotion reason: `holdout_not_better_than_reference,worst_fold_below_reference,reproducibility_threshold_failed`
 
 ## Interpretation
 
-- Against the old daily/event_v1 direction (`event_v1_layer1` best model `hist_gradient_boosting`), the redesigned event setup improves best CV AUC from `0.5056` to `0.5726` and best holdout AUC from `0.5180` to `0.4135`.
-- Promote only if the tuned winner improves on the current quarterly champion without sacrificing worst-fold behavior or reproducibility.
+- Against the old daily/event_v1 direction (`event_v1_layer1` best model `hist_gradient_boosting`), the redesigned event setup improves best CV AUC from `0.5056` to `0.5162` and best holdout AUC from `0.5180` to `0.5367`.
+- Promote only if the focused retune improves on the current quarterly champion and still beats the baseline keepers on holdout quality.
 - Reference benchmark for promotion was `random_forest` with holdout AUC `0.5367`.

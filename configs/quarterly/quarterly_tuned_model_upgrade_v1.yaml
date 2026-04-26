@@ -197,6 +197,7 @@ random_seed:
 
 promotion:
   strategy: stability_aware
+  primary_model_max_holdout_auc_lag: 0.02
   reference_results_csv: reports/results/quarterly_phase9_event_specific_sentiment_champion_benchmark.csv
   min_holdout_auc_delta: 0.0
 

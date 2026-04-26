@@ -5,6 +5,8 @@ import pandas as pd
 
 from src.universe import get_project_sector_map
 
+MIN_INDUSTRY_CROSS_SECTIONAL_GROUP_SIZE = 3
+
 QUARTERLY_DELTA_SOURCE_COLUMNS = [
     "operating_margin",
     "net_margin",
@@ -690,11 +692,19 @@ def build_cross_sectional_coverage(panel_df: pd.DataFrame) -> pd.DataFrame:
 
 def _resolve_cross_sectional_group_key(prepared: pd.DataFrame) -> pd.Series:
     if "sector" in prepared.columns:
-        sector_key = prepared["sector"].astype("string")
+        sector_key = prepared["sector"].astype("string").str.strip()
     else:
         sector_map = get_project_sector_map()
         sector_key = prepared["ticker"].astype("string").str.upper().map(sector_map).astype("string")
-    sector_key = sector_key.fillna("unknown_sector")
+    sector_key = sector_key.mask(sector_key.eq("")).fillna("unknown_sector")
+
+    if "industry" in prepared.columns:
+        industry_key = prepared["industry"].astype("string").str.strip()
+    elif "industry_classification_raw" in prepared.columns:
+        industry_key = prepared["industry_classification_raw"].astype("string").str.split(";").str[0].str.strip()
+    else:
+        industry_key = pd.Series(pd.NA, index=prepared.index, dtype="string")
+    industry_key = industry_key.mask(industry_key.eq("")).mask(industry_key.str.lower().isin(["unknown", "unknown_industry"]))
 
     fiscal_year_source = prepared.get("event_fiscal_year")
     if fiscal_year_source is None:
@@ -714,7 +724,19 @@ def _resolve_cross_sectional_group_key(prepared: pd.DataFrame) -> pd.Series:
     fiscal_period = pd.Series(fiscal_period, index=prepared.index).astype("string")
 
     quarter_key = ("fy" + fiscal_year.fillna("unknown") + "_" + fiscal_period.fillna("unknown")).astype("string")
-    return (quarter_key + "__" + sector_key).astype("string")
+
+    industry_group_key = (quarter_key + "__industry__" + industry_key.fillna("missing")).astype("string")
+    industry_group_size = industry_group_key.groupby(industry_group_key, dropna=False).transform("size")
+    use_industry = industry_key.notna() & industry_group_size.ge(MIN_INDUSTRY_CROSS_SECTIONAL_GROUP_SIZE)
+    use_sector = ~use_industry & sector_key.ne("unknown_sector")
+
+    group_key = pd.Series(pd.NA, index=prepared.index, dtype="string")
+    group_key.loc[use_industry] = (
+        quarter_key.loc[use_industry] + "__industry__" + industry_key.loc[use_industry]
+    ).astype("string")
+    group_key.loc[use_sector] = (quarter_key.loc[use_sector] + "__sector__" + sector_key.loc[use_sector]).astype("string")
+    group_key = group_key.fillna((quarter_key + "__global").astype("string"))
+    return group_key.astype("string")
 
 
 def build_quarterly_feature_design_panel(panel_df: pd.DataFrame, price_df: pd.DataFrame | None = None) -> pd.DataFrame:
