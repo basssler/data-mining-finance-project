@@ -109,7 +109,7 @@ DEFAULT_PROJECT_CONFIG: dict[str, Any] = {
         "manifest_path": "configs/quarterly/experiments/benchmark_ladder.yaml",
         "docs_dir": "docs/quarterly",
         "outputs_dir": "outputs/quarterly",
-        "baseline_config": "configs/event_panel_v2_quarterly.yaml",
+        "baseline_config": "configs/event_panel_v2_quarterly_63d_sector_relative.yaml",
         "candidate_config": "configs/event_panel_v2_quarterly_stability_core_additive.yaml",
         "registry_doc": "docs/quarterly/promoted_models.md",
     },

@@ -10,11 +10,12 @@ steps:
     notes: Historical baseline only. No quarterly config should point here.
   - ladder_step: 2
     slug: quarterly-event-baseline
-    title: Quarterly event baseline with old features
-    objective: Run the current 63-trading-day quarterly lane on the checked-in event panel.
-    config_path: configs/event_panel_v2_quarterly.yaml
-    csv_path: reports/results/event_panel_v2_quarterly_benchmark.csv
-    markdown_path: reports/results/event_panel_v2_quarterly_benchmark.md
+    title: Quarterly event baseline with final 63-day label
+    objective: Run the canonical 63-trading-day sector-relative quarterly lane on the checked-in event panel.
+    config_path: configs/event_panel_v2_quarterly_63d_sector_relative.yaml
+    csv_path: reports/results/event_panel_v2_quarterly_63d_sector_relative_benchmark.csv
+    markdown_path: reports/results/event_panel_v2_quarterly_63d_sector_relative_benchmark.md
+    notes: The older configs/event_panel_v2_quarterly.yaml artifact is a legacy 21-day comparison only.
   - ladder_step: 3
     slug: improved-label
     title: Quarterly event baseline with improved label

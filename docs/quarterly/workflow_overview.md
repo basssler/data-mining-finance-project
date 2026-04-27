@@ -38,7 +38,7 @@ The repo default is no longer the daily `5`-day lane. The quarterly system now d
 - Unit of observation: one quarterly filing event
 - Live label: `event_v2_63d_sign`
 - Live validation: `5`-fold purged expanding-window CV with `2024` holdout
-- Live baseline config: `configs/event_panel_v2_quarterly.yaml`
+- Live baseline config: `configs/event_panel_v2_quarterly_63d_sector_relative.yaml`
 - Active candidate config: `configs/event_panel_v2_quarterly_stability_core_additive.yaml`
 - Promotion registry: `docs/quarterly/promoted_models.md`
 

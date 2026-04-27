@@ -58,6 +58,21 @@ FEATURE_COLUMNS = [
     "roa",
     "roe",
     "asset_turnover",
+    "ttm_revenue",
+    "ttm_net_income",
+    "ttm_operating_cash_flow",
+    "ttm_asset_turnover",
+    "ttm_roa",
+    "ttm_roe",
+    "ttm_cfo_to_assets",
+    "qtr_asset_turnover",
+    "qtr_roa",
+    "qtr_roe",
+    "qtr_net_margin",
+    "annual_asset_turnover",
+    "annual_roa",
+    "annual_roe",
+    "annual_net_margin",
     "inventory_turnover",
     "receivables_turnover",
     "interest_coverage",
@@ -274,6 +289,20 @@ def compute_growth(series: pd.Series, ticker_series: pd.Series, periods: int) ->
     return safe_divide(series - prior_values, prior_values)
 
 
+def compute_ttm_flow(df: pd.DataFrame, flow_series: pd.Series) -> pd.Series:
+    """Compute trailing-four-quarter flow values without mixing annual filings."""
+    form_type = df["form_type"].astype("string").str.upper()
+    fiscal_period = df["fiscal_period"].astype("string").str.upper()
+    is_quarterly = form_type.str.startswith("10-Q", na=False) & fiscal_period.isin(["Q1", "Q2", "Q3"])
+    is_annual = form_type.str.startswith("10-K", na=False) | fiscal_period.eq("FY")
+    ttm = pd.Series(np.nan, index=df.index, dtype="float64")
+    for _, group_index in df.loc[is_quarterly].groupby("ticker").groups.items():
+        index = pd.Index(group_index)
+        ttm.loc[index] = flow_series.loc[index].rolling(window=4, min_periods=4).sum()
+    ttm.loc[is_annual] = flow_series.loc[is_annual]
+    return ttm
+
+
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     """Create Layer 1 financial statement features."""
     features_df = df.copy()
@@ -309,6 +338,13 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     total_debt = short_term_debt.fillna(0.0) + long_term_debt.fillna(0.0)
     total_debt_ratio = safe_divide(total_debt, total_assets)
     free_cash_flow = operating_cash_flow - capex
+    form_type = features_df["form_type"].astype("string").str.upper()
+    fiscal_period = features_df["fiscal_period"].astype("string").str.upper()
+    is_quarterly = form_type.str.startswith("10-Q", na=False) & fiscal_period.isin(["Q1", "Q2", "Q3"])
+    is_annual = form_type.str.startswith("10-K", na=False) | fiscal_period.eq("FY")
+    ttm_revenue = compute_ttm_flow(features_df, revenue)
+    ttm_net_income = compute_ttm_flow(features_df, net_income)
+    ttm_operating_cash_flow = compute_ttm_flow(features_df, operating_cash_flow)
 
     # Liquidity ratios
     # current_ratio = current_assets / current_liabilities
@@ -347,15 +383,30 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     # net_margin = net_income / revenue
     features_df["net_margin"] = safe_divide(net_income, revenue)
 
-    # roa = net_income / average_total_assets
-    features_df["roa"] = safe_divide(net_income, average_total_assets)
+    # TTM-normalized balance-sheet denominator ratios avoid mixing quarterly and annual flow scales.
+    features_df["ttm_revenue"] = ttm_revenue
+    features_df["ttm_net_income"] = ttm_net_income
+    features_df["ttm_operating_cash_flow"] = ttm_operating_cash_flow
+    features_df["ttm_asset_turnover"] = safe_divide(ttm_revenue, average_total_assets)
+    features_df["ttm_roa"] = safe_divide(ttm_net_income, average_total_assets)
+    features_df["ttm_roe"] = safe_divide(ttm_net_income, average_shareholders_equity)
+    features_df["ttm_cfo_to_assets"] = safe_divide(ttm_operating_cash_flow, average_total_assets)
+    features_df["qtr_asset_turnover"] = safe_divide(revenue.where(is_quarterly), average_total_assets)
+    features_df["qtr_roa"] = safe_divide(net_income.where(is_quarterly), average_total_assets)
+    features_df["qtr_roe"] = safe_divide(net_income.where(is_quarterly), average_shareholders_equity)
+    features_df["qtr_net_margin"] = safe_divide(net_income.where(is_quarterly), revenue.where(is_quarterly))
+    features_df["annual_asset_turnover"] = safe_divide(revenue.where(is_annual), average_total_assets)
+    features_df["annual_roa"] = safe_divide(net_income.where(is_annual), average_total_assets)
+    features_df["annual_roe"] = safe_divide(net_income.where(is_annual), average_shareholders_equity)
+    features_df["annual_net_margin"] = safe_divide(net_income.where(is_annual), revenue.where(is_annual))
 
-    # roe = net_income / average_shareholders_equity
-    features_df["roe"] = safe_divide(net_income, average_shareholders_equity)
+    # Generic balance-sheet denominator ratios now use TTM-normalized flows.
+    features_df["roa"] = features_df["ttm_roa"]
+
+    features_df["roe"] = features_df["ttm_roe"]
 
     # Efficiency ratios
-    # asset_turnover = revenue / average_total_assets
-    features_df["asset_turnover"] = safe_divide(revenue, average_total_assets)
+    features_df["asset_turnover"] = features_df["ttm_asset_turnover"]
 
     # inventory_turnover = cogs / average_inventory
     features_df["inventory_turnover"] = safe_divide(cogs, average_inventory)
@@ -412,7 +463,7 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # accruals_ratio = (net_income - operating_cash_flow) / average_total_assets
     features_df["accruals_ratio"] = safe_divide(
-        net_income - operating_cash_flow,
+        ttm_net_income - ttm_operating_cash_flow,
         average_total_assets,
     )
 

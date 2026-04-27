@@ -317,7 +317,7 @@ Stop model churn and test the redesigned data with only the three anchor models.
 ### Current additive scope
 - Keep the original 5-trading-day lane as the historical anchor for the existing lock docs.
 - Allow parallel configs that reuse the same `event_panel_v2` base when they represent separate benchmark lanes rather than a replacement benchmark.
-- The current example is the quarterly 63-trading-day excess-return-sign lane in `configs/event_panel_v2_quarterly.yaml`.
+- The current example is the quarterly 63-trading-day sector-relative sign lane in `configs/event_panel_v2_quarterly_63d_sector_relative.yaml`.
 
 ### Suggested files
 - `src/train_event_v2.py`

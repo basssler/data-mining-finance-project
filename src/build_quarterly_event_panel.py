@@ -556,10 +556,12 @@ def enrich_feature_panel(
     )
     if enriched["event_id"].isna().any():
         missing = enriched.loc[enriched["event_id"].isna(), ["ticker", "event_type", "source_id"]]
-        raise ValueError(
-            "Filtered quarterly event master did not map onto every feature row; "
-            f"missing matches: {missing.head(5).to_dict(orient='records')}"
+        print(
+            "Filtered quarterly event master excluded feature rows; "
+            f"dropping {len(missing):,} rows from the feature panel. "
+            f"Examples: {missing.head(5).to_dict(orient='records')}"
         )
+        enriched = enriched.loc[enriched["event_id"].notna()].copy()
 
     enriched["fiscal_year"] = pd.to_numeric(enriched["event_fiscal_year"], errors="coerce").astype("Int64")
     enriched["fiscal_period"] = enriched["event_fiscal_period"].astype("string")

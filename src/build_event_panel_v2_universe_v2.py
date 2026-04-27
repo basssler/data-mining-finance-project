@@ -170,15 +170,20 @@ def build_raw_fundamentals_artifact(tickers: list[str]) -> pd.DataFrame:
     return raw_df
 
 
-def build_clean_fundamentals_artifact(raw_df: pd.DataFrame) -> pd.DataFrame:
+def build_clean_fundamentals_artifact(raw_df: pd.DataFrame, timing_df: pd.DataFrame | None = None) -> pd.DataFrame:
     print("\nCleaning universe_v2 fundamentals...")
-    normalized_df = fundamentals_clean.normalize_raw_data(raw_df)
-    concept_deduped_df, concept_dedup_removed = fundamentals_clean.deduplicate_concept_rows(normalized_df)
+    concept_deduped_df, selection_diagnostics_df, timing_diagnostics_df = fundamentals_clean.clean_fundamentals_from_raw(
+        raw_df,
+        timing_table_df=timing_df,
+    )
+    concept_dedup_removed = len(raw_df) - len(concept_deduped_df)
     metadata_df, period_dedup_removed = fundamentals_clean.build_period_metadata(concept_deduped_df)
     concept_wide_df = fundamentals_clean.pivot_concepts_to_wide(concept_deduped_df)
     final_df = fundamentals_clean.combine_metadata_and_concepts(metadata_df, concept_wide_df)
     fundamentals_clean.save_clean_fundamentals(final_df, UNIVERSE_V2_CLEAN_FUNDAMENTALS_PATH)
     fundamentals_clean.save_coverage_diagnostics(concept_deduped_df, final_df)
+    fundamentals_clean.save_selection_diagnostics(selection_diagnostics_df)
+    fundamentals_clean.save_effective_model_date_diagnostics(timing_diagnostics_df)
     fundamentals_clean.print_data_quality_summary(
         df=final_df,
         concept_dedup_removed=concept_dedup_removed,
@@ -441,7 +446,8 @@ def main() -> None:
     price_df = build_price_artifact(tickers)
     build_market_artifact(price_df)
     raw_fundamentals_df = build_raw_fundamentals_artifact(tickers)
-    clean_fundamentals_df = build_clean_fundamentals_artifact(raw_fundamentals_df)
+    raw_metadata_df = build_sec_metadata_artifact(tickers, price_df)
+    clean_fundamentals_df = build_clean_fundamentals_artifact(raw_fundamentals_df, timing_df=raw_metadata_df)
     build_layer1_feature_artifact(clean_fundamentals_df)
     text_index_df = build_sec_text_artifact(tickers)
     print(f"Universe_v2 SEC text rows: {len(text_index_df):,}")
@@ -454,7 +460,6 @@ def main() -> None:
         rescore_sentiment=args.rescore_sentiment,
     )
     build_sec_sentiment_feature_artifact(raw_sentiment_df)
-    build_sec_metadata_artifact(tickers, price_df)
     panel_df = build_final_panel_artifact()
 
     print("\nUniverse V2 Build Complete")

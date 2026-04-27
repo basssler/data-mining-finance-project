@@ -60,6 +60,7 @@ OUTPUT_COLUMNS = [
     "ticker",
     "cik",
     "filing_date",
+    "accepted_datetime",
     "period_end",
     "fiscal_period",
     "fiscal_year",
@@ -68,6 +69,11 @@ OUTPUT_COLUMNS = [
     "value",
     "unit",
     "raw_tag",
+    "accession_number",
+    "start_date",
+    "end_date",
+    "frame",
+    "fact_duration_days",
     "source",
 ]
 
@@ -189,12 +195,19 @@ def in_date_window(
 def normalize_record(record: dict) -> dict:
     """Convert one raw fact into the standard output column format."""
     filing_date = parse_date(record.get("filing_date"))
+    accepted_datetime = pd.to_datetime(record.get("accepted_datetime"), errors="coerce")
     period_end = parse_date(record.get("period_end"))
+    start_date = parse_date(record.get("start_date"))
+    end_date = parse_date(record.get("end_date")) or period_end
+    fact_duration_days = record.get("fact_duration_days")
+    if fact_duration_days is None and start_date is not None and end_date is not None:
+        fact_duration_days = (end_date - start_date).days + 1
 
     return {
         "ticker": record.get("ticker"),
         "cik": record.get("cik"),
         "filing_date": filing_date,
+        "accepted_datetime": accepted_datetime,
         "period_end": period_end,
         "fiscal_period": record.get("fiscal_period"),
         "fiscal_year": record.get("fiscal_year"),
@@ -203,6 +216,11 @@ def normalize_record(record: dict) -> dict:
         "value": record.get("value"),
         "unit": record.get("unit"),
         "raw_tag": record.get("raw_tag"),
+        "accession_number": record.get("accession_number"),
+        "start_date": start_date,
+        "end_date": end_date,
+        "frame": record.get("frame"),
+        "fact_duration_days": fact_duration_days,
         "source": record.get("source"),
     }
 
@@ -247,6 +265,7 @@ def fetch_company_facts_via_sec(
                                 "ticker": ticker,
                                 "cik": cik,
                                 "filing_date": fact.get("filed"),
+                                "accepted_datetime": fact.get("acceptanceDateTime"),
                                 "period_end": fact.get("end"),
                                 "fiscal_period": fact.get("fp"),
                                 "fiscal_year": fact.get("fy"),
@@ -255,6 +274,10 @@ def fetch_company_facts_via_sec(
                                 "value": fact.get("val"),
                                 "unit": unit_name,
                                 "raw_tag": tag,
+                                "accession_number": fact.get("accn"),
+                                "start_date": fact.get("start"),
+                                "end_date": fact.get("end"),
+                                "frame": fact.get("frame"),
                                 "source": "sec_companyfacts",
                             }
                         )
@@ -348,6 +371,9 @@ def fetch_company_facts_via_edgartools(
             form_col = first_matching_column(df.columns, ["form_type", "form"])
             value_col = first_matching_column(df.columns, ["numeric_value", "value", "val"])
             unit_col = first_matching_column(df.columns, ["unit", "units"])
+            accession_col = first_matching_column(df.columns, ["accession_number", "accn"])
+            start_col = first_matching_column(df.columns, ["start_date", "start"])
+            frame_col = first_matching_column(df.columns, ["frame"])
 
             if not filing_col or not form_col or not value_col:
                 continue
@@ -368,6 +394,7 @@ def fetch_company_facts_via_edgartools(
                             "ticker": ticker,
                             "cik": cik,
                             "filing_date": filing_date,
+                            "accepted_datetime": row.get("accepted_datetime"),
                             "period_end": period_end,
                             "fiscal_period": row.get(fp_col) if fp_col else None,
                             "fiscal_year": row.get(fy_col) if fy_col else None,
@@ -376,6 +403,10 @@ def fetch_company_facts_via_edgartools(
                             "value": row.get(value_col),
                             "unit": row.get(unit_col) if unit_col else None,
                             "raw_tag": tag,
+                            "accession_number": row.get(accession_col) if accession_col else None,
+                            "start_date": row.get(start_col) if start_col else None,
+                            "end_date": period_end,
+                            "frame": row.get(frame_col) if frame_col else None,
                             "source": "edgartools_companyfacts",
                         }
                     )
@@ -392,26 +423,26 @@ def fetch_ticker_facts(
     cik: str,
     requester: SecRequester,
 ) -> List[dict]:
-    """Fetch one company's facts, preferring edgartools and falling back to SEC JSON."""
+    """Fetch one company's facts, preferring SEC JSON metadata and falling back to edgartools."""
     try:
-        rows = fetch_company_facts_via_edgartools(
+        rows = fetch_company_facts_via_sec(
             ticker=ticker,
             cik=cik,
-            user_agent=requester.user_agent,
+            requester=requester,
         )
         if rows:
-            print(f"{ticker}: downloaded {len(rows)} rows via edgartools")
+            print(f"{ticker}: downloaded {len(rows)} rows via SEC JSON")
             return rows
-        print(f"{ticker}: edgartools returned no rows, falling back to SEC JSON")
+        print(f"{ticker}: SEC JSON returned no rows, falling back to edgartools")
     except Exception as exc:
-        print(f"{ticker}: edgartools failed, falling back to SEC JSON -> {exc}")
+        print(f"{ticker}: SEC JSON failed, falling back to edgartools -> {exc}")
 
-    rows = fetch_company_facts_via_sec(
+    rows = fetch_company_facts_via_edgartools(
         ticker=ticker,
         cik=cik,
-        requester=requester,
+        user_agent=requester.user_agent,
     )
-    print(f"{ticker}: downloaded {len(rows)} rows via SEC JSON")
+    print(f"{ticker}: downloaded {len(rows)} rows via edgartools")
     return rows
 
 
@@ -430,12 +461,18 @@ def build_dataframe(rows: List[dict]) -> pd.DataFrame:
     df["concept_name"] = df["concept_name"].astype("string")
     df["unit"] = df["unit"].astype("string")
     df["raw_tag"] = df["raw_tag"].astype("string")
+    df["accession_number"] = df["accession_number"].astype("string")
+    df["frame"] = df["frame"].astype("string")
     df["source"] = df["source"].astype("string")
 
     df["filing_date"] = pd.to_datetime(df["filing_date"], errors="coerce")
+    df["accepted_datetime"] = pd.to_datetime(df["accepted_datetime"], errors="coerce")
     df["period_end"] = pd.to_datetime(df["period_end"], errors="coerce")
+    df["start_date"] = pd.to_datetime(df["start_date"], errors="coerce")
+    df["end_date"] = pd.to_datetime(df["end_date"], errors="coerce")
     df["fiscal_year"] = pd.to_numeric(df["fiscal_year"], errors="coerce").astype("Int64")
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
+    df["fact_duration_days"] = pd.to_numeric(df["fact_duration_days"], errors="coerce")
 
     df = df.dropna(subset=["ticker", "cik", "filing_date", "concept_name", "value"])
     df = df.drop_duplicates()

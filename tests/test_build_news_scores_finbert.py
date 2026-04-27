@@ -39,6 +39,8 @@ class BuildNewsScoresFinbertTests(unittest.TestCase):
             device="cpu",
             min_text_length=min_text_length,
             fail_on_empty=fail_on_empty,
+            checkpoint_output="",
+            no_resume=False,
         )
 
     @staticmethod

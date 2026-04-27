@@ -31,7 +31,7 @@ DEFAULT_HORIZONS = [5, 10, 21, 63]
 DEFAULT_THRESHOLD = 0.015
 DEFAULT_QUANTILE_BUCKETS = 3
 DEFAULT_BENCHMARK_MODE = "sector_equal_weight_ex_self"
-DEFAULT_RECOMMENDED_LABEL = "event_v2_21d_excess_sign"
+DEFAULT_RECOMMENDED_LABEL = "event_v2_63d_excess_sign"
 
 
 def parse_args() -> argparse.Namespace:
@@ -282,9 +282,9 @@ def write_recommendation_summary(all_payloads: list[dict[str, object]]) -> None:
         f"Default quarterly benchmark label: `{DEFAULT_RECOMMENDED_LABEL}`",
         "",
         "Reason:",
-        "- It matches the redesign brief's primary label: 21-trading-day excess return versus the sector benchmark.",
-        "- It keeps all non-ambiguous events, which makes it the clean benchmark to compare against the thresholded and quantile variants.",
-        "- The thresholded 21-day label is kept as the cleaner secondary benchmark for robustness checks.",
+        "- It matches the final project label contract: 63-trading-day sector-relative sign.",
+        "- It keeps all non-ambiguous events, which makes it the clean benchmark to compare against thresholded and quantile variants.",
+        "- The 5-day, 10-day, and 21-day labels are retained as historical comparison variants, not active defaults.",
         "",
         "Implemented formulas:",
         "- `excess`: stock forward return minus sector leave-one-out benchmark, then sign.",

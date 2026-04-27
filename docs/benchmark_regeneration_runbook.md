@@ -11,7 +11,7 @@ Use the repo-local `.venv` for every run.
 1. Regenerate the live quarterly baseline first.
 
 ```powershell
-.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly.yaml
+.venv\Scripts\python.exe src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly_63d_sector_relative.yaml
 ```
 
 2. Regenerate the active quarterly candidate and quarterly scaffold diagnostics.
@@ -40,6 +40,6 @@ Use the repo-local `.venv` for every run.
 
 ## Notes
 
-- Treat `reports/results/event_panel_v2_quarterly_benchmark.csv` as the live baseline comparison anchor.
+- Treat `reports/results/event_panel_v2_quarterly_63d_sector_relative_benchmark.csv` as the live baseline comparison anchor.
 - Treat `reports/results/event_panel_v2_primary_benchmark.csv` as the frozen daily historical comparator.
 - Regenerate the derivative reports after their benchmark CSVs are refreshed; otherwise the narratives can drift from the artifacts.

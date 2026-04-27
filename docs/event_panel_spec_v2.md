@@ -60,31 +60,31 @@ One row in `event_panel_v2` equals one ticker-event.
 
 | column | missing_pct |
 | --- | --- |
-| gross_margin | 100.0000 |
-| free_cash_flow | 100.0000 |
-| interest_coverage | 100.0000 |
-| inventory_turnover | 100.0000 |
-| capex_intensity | 100.0000 |
-| shareholder_payout_ratio | 100.0000 |
-| free_cash_flow_to_net_income | 100.0000 |
-| free_cash_flow_margin | 100.0000 |
-| receivables_turnover | 27.0514 |
-| earnings_growth_yoy | 24.4364 |
-| revenue_growth_yoy | 22.0920 |
-| quick_ratio | 17.9441 |
+| shareholder_payout_ratio | 63.3003 |
+| interest_coverage | 38.5032 |
+| debt_to_assets | 34.3553 |
+| debt_to_equity | 34.3553 |
+| free_cash_flow_margin | 31.5600 |
+| capex_intensity | 31.0189 |
+| receivables_turnover | 30.8386 |
+| operating_margin | 24.5266 |
+| asset_turnover | 21.1903 |
+| gross_margin | 20.8296 |
+| revenue_growth_yoy | 19.8377 |
+| net_margin | 19.2967 |
 
 ### Sample Rows
 
 | ticker | event_type | event_date | event_timestamp | effective_model_date | timing_bucket | source_id | event_period_end | market_asof_date | fund_snapshot_filing_date | fund_snapshot_is_current_event | current_filing_sentiment_available |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ADM | 10-K | 2016-02-19 | 2016-02-19 09:51:18-0500 | 2016-02-19 | market_hours | 0000007084-16-000046 |  | 2016-02-18 | 2015-08-04 | False | True |
-| MDLZ | 10-K | 2016-02-19 | 2016-02-19 11:41:16-0500 | 2016-02-19 | market_hours | 0001193125-16-469394 |  | 2016-02-18 | 2015-07-31 | False | True |
-| MNST | 10-K | 2016-02-29 | 2016-02-29 10:09:11-0500 | 2016-02-29 | market_hours | 0001104659-16-100960 | 2015-06-12 | 2016-02-26 | 2016-02-29 | True | True |
-| BF-B | 10-K | 2016-06-16 | 2016-06-15 13:49:15-0400 | 2016-06-15 | market_hours | 0000014693-16-000160 | 2016-06-01 | 2016-06-14 | 2016-06-16 | True | True |
-| MDLZ | 10-Q | 2015-07-31 | 2015-07-31 11:28:20-0400 | 2015-07-31 | market_hours | 0001193125-15-272328 | 2015-02-16 | 2015-07-30 | 2015-07-31 | True | True |
-| ADM | 10-Q | 2015-08-04 | 2015-08-04 12:31:30-0400 | 2015-08-04 | market_hours | 0000007084-15-000023 | 2015-05-01 | 2015-08-03 | 2015-08-04 | True | True |
-| MDLZ | 10-Q | 2015-10-29 | 2015-10-29 11:27:05-0400 | 2015-10-29 | market_hours | 0001193125-15-357422 |  | 2015-10-28 | 2015-07-31 | False | True |
-| ADM | 10-Q | 2015-11-03 | 2015-11-03 11:03:34-0500 | 2015-11-03 | market_hours | 0000007084-15-000037 |  | 2015-11-02 | 2015-08-04 | False | True |
+| ADM | 10-K | 2016-02-19 | 2016-02-19 09:51:18-0500 | 2016-02-19 | market_hours | 0000007084-16-000046 | 2015-12-31 | 2016-02-18 | 2016-02-19 | True | True |
+| MDLZ | 10-K | 2016-02-19 | 2016-02-19 11:41:16-0500 | 2016-02-19 | market_hours | 0001193125-16-469394 | 2015-12-31 | 2016-02-18 | 2016-02-19 | True | True |
+| MNST | 10-K | 2016-02-29 | 2016-02-29 10:09:11-0500 | 2016-02-29 | market_hours | 0001104659-16-100960 |  | 2016-02-26 | 2015-11-06 | False | True |
+| BF-B | 10-K | 2016-06-16 | 2016-06-15 13:49:15-0400 | 2016-06-15 | market_hours | 0000014693-16-000160 |  | 2016-06-14 | 2016-03-02 | False | True |
+| MDLZ | 10-Q | 2015-07-31 | 2015-07-31 11:28:20-0400 | 2015-07-31 | market_hours | 0001193125-15-272328 | 2015-06-30 | 2015-07-30 | 2015-07-31 | True | True |
+| ADM | 10-Q | 2015-08-04 | 2015-08-04 12:31:30-0400 | 2015-08-04 | market_hours | 0000007084-15-000023 | 2015-06-30 | 2015-08-03 | 2015-08-04 | True | True |
+| MDLZ | 10-Q | 2015-10-29 | 2015-10-29 11:27:05-0400 | 2015-10-29 | market_hours | 0001193125-15-357422 | 2015-09-30 | 2015-10-28 | 2015-10-29 | True | True |
+| ADM | 10-Q | 2015-11-03 | 2015-11-03 11:03:34-0500 | 2015-11-03 | market_hours | 0000007084-15-000037 | 2015-09-30 | 2015-11-02 | 2015-11-03 | True | True |
 
 ## Comparison To Current Daily/Event_V1 Design
 
@@ -93,9 +93,9 @@ In the daily/event_v1 design, one filing can influence many later rows through d
 
 ## Structural Notes
 
-- Exact current-filing fundamentals available: `566` of `1,109` rows
+- Exact current-filing fundamentals available: `913` of `1,109` rows
 - Exact current-filing sentiment available: `1,109` of `1,109` rows
-- Rows where the attached fundamentals snapshot equals the current event: `565` of `1,109` rows
+- Rows where the attached fundamentals snapshot equals the current event: `912` of `1,109` rows
 - When exact current-filing fundamentals are unavailable, the panel keeps the row and attaches the latest prior valid fundamentals snapshot instead. That fallback is explicit through `current_filing_fundamentals_available` and `fund_snapshot_is_current_event`.
 
 ## Artifact

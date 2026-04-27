@@ -116,6 +116,38 @@ class AccountingExpansionTests(unittest.TestCase):
         self.assertTrue(math.isclose(float(engineered.loc[1, "shareholder_payout_ratio"]), 5.5 / 18.0, abs_tol=1e-12))
         self.assertTrue(math.isclose(float(engineered.loc[1, "leverage_change_qoq"]), (66.0 / 220.0) - (60.0 / 200.0), abs_tol=1e-12))
 
+    def test_engineer_features_separates_ttm_quarterly_and_annual_flow_scales(self) -> None:
+        rows = []
+        for index, period_end in enumerate(["2023-03-31", "2023-06-30", "2023-09-30", "2023-12-31"]):
+            rows.append(
+                {
+                    "ticker": "AAA",
+                    "cik": "0001",
+                    "filing_date": pd.Timestamp(period_end) + pd.Timedelta(days=30),
+                    "period_end": pd.Timestamp(period_end),
+                    "fiscal_period": f"Q{index + 1}" if index < 3 else "FY",
+                    "fiscal_year": 2023,
+                    "form_type": "10-Q" if index < 3 else "10-K",
+                    "revenue": 100.0 if index < 3 else 400.0,
+                    "net_income": 10.0 if index < 3 else 40.0,
+                    "operating_cash_flow": 12.0 if index < 3 else 48.0,
+                    "total_assets": 200.0,
+                    "shareholders_equity": 100.0,
+                    "total_liabilities": 100.0,
+                    "current_assets": 80.0,
+                    "current_liabilities": 40.0,
+                    "cash_and_cash_equivalents": 20.0,
+                    "long_term_debt": 20.0,
+                }
+            )
+
+        engineered = engineer_features(normalize_input_data(pd.DataFrame(rows)))
+
+        self.assertTrue(math.isclose(float(engineered.loc[3, "annual_asset_turnover"]), 400.0 / 200.0, abs_tol=1e-12))
+        self.assertTrue(math.isclose(float(engineered.loc[3, "asset_turnover"]), float(engineered.loc[3, "ttm_asset_turnover"]), abs_tol=1e-12))
+        self.assertTrue(pd.isna(engineered.loc[3, "qtr_asset_turnover"]))
+        self.assertTrue(pd.isna(engineered.loc[0, "annual_asset_turnover"]))
+
     def test_save_diagnostics_reports_writes_expected_files(self) -> None:
         concept_df = pd.DataFrame({"ticker": ["AAA"], "concept_name": ["revenue"]})
         clean_df = pd.DataFrame(

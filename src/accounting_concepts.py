@@ -17,6 +17,7 @@ class AccountingConceptSpec:
     candidate_tags: tuple[str, ...]
     preferred_unit: str
     conflict_resolution_rule: str
+    concept_type: str = "flow"
 
 
 CONCEPT_SPECS: dict[str, AccountingConceptSpec] = {
@@ -132,24 +133,28 @@ CONCEPT_SPECS: dict[str, AccountingConceptSpec] = {
         candidate_tags=("Assets",),
         preferred_unit="USD",
         conflict_resolution_rule="Prefer USD facts, then Assets, then the latest filing_date.",
+        concept_type="instant",
     ),
     "total_liabilities": AccountingConceptSpec(
         canonical_name="total_liabilities",
         candidate_tags=("Liabilities",),
         preferred_unit="USD",
         conflict_resolution_rule="Prefer USD facts, then Liabilities, then the latest filing_date.",
+        concept_type="instant",
     ),
     "current_assets": AccountingConceptSpec(
         canonical_name="current_assets",
         candidate_tags=("AssetsCurrent",),
         preferred_unit="USD",
         conflict_resolution_rule="Prefer USD facts, then AssetsCurrent, then the latest filing_date.",
+        concept_type="instant",
     ),
     "current_liabilities": AccountingConceptSpec(
         canonical_name="current_liabilities",
         candidate_tags=("LiabilitiesCurrent",),
         preferred_unit="USD",
         conflict_resolution_rule="Prefer USD facts, then LiabilitiesCurrent, then the latest filing_date.",
+        concept_type="instant",
     ),
     "cash_and_cash_equivalents": AccountingConceptSpec(
         canonical_name="cash_and_cash_equivalents",
@@ -161,6 +166,7 @@ CONCEPT_SPECS: dict[str, AccountingConceptSpec] = {
         conflict_resolution_rule=(
             "Prefer unrestricted cash if present, otherwise the broader cash-and-restricted-cash tag, then the latest filing_date."
         ),
+        concept_type="instant",
     ),
     "accounts_receivable": AccountingConceptSpec(
         canonical_name="accounts_receivable",
@@ -170,12 +176,14 @@ CONCEPT_SPECS: dict[str, AccountingConceptSpec] = {
         ),
         preferred_unit="USD",
         conflict_resolution_rule="Prefer USD facts, then AccountsReceivableNetCurrent, then the latest filing_date.",
+        concept_type="instant",
     ),
     "inventory": AccountingConceptSpec(
         canonical_name="inventory",
         candidate_tags=("InventoryNet", "InventoriesNetOfReserves"),
         preferred_unit="USD",
         conflict_resolution_rule="Prefer USD facts, then InventoryNet, then the latest filing_date.",
+        concept_type="instant",
     ),
     "ppe_net": AccountingConceptSpec(
         canonical_name="ppe_net",
@@ -185,12 +193,14 @@ CONCEPT_SPECS: dict[str, AccountingConceptSpec] = {
         ),
         preferred_unit="USD",
         conflict_resolution_rule="Prefer USD facts, then PP&E net tags in priority order, then the latest filing_date.",
+        concept_type="instant",
     ),
     "goodwill": AccountingConceptSpec(
         canonical_name="goodwill",
         candidate_tags=("Goodwill",),
         preferred_unit="USD",
         conflict_resolution_rule="Prefer USD facts, then Goodwill, then the latest filing_date.",
+        concept_type="instant",
     ),
     "intangible_assets": AccountingConceptSpec(
         canonical_name="intangible_assets",
@@ -203,6 +213,7 @@ CONCEPT_SPECS: dict[str, AccountingConceptSpec] = {
         conflict_resolution_rule=(
             "Prefer USD facts, then net non-goodwill intangibles, then the latest filing_date."
         ),
+        concept_type="instant",
     ),
     "short_term_debt": AccountingConceptSpec(
         canonical_name="short_term_debt",
@@ -216,6 +227,7 @@ CONCEPT_SPECS: dict[str, AccountingConceptSpec] = {
         conflict_resolution_rule=(
             "Prefer USD facts, then explicit short-term borrowings, then current debt portions, then the latest filing_date."
         ),
+        concept_type="instant",
     ),
     "long_term_debt": AccountingConceptSpec(
         canonical_name="long_term_debt",
@@ -228,6 +240,7 @@ CONCEPT_SPECS: dict[str, AccountingConceptSpec] = {
         conflict_resolution_rule=(
             "Prefer USD facts, then the broadest long-term-debt tag, then the latest filing_date."
         ),
+        concept_type="instant",
     ),
     "shareholders_equity": AccountingConceptSpec(
         canonical_name="shareholders_equity",
@@ -237,6 +250,7 @@ CONCEPT_SPECS: dict[str, AccountingConceptSpec] = {
         ),
         preferred_unit="USD",
         conflict_resolution_rule="Prefer USD facts, then StockholdersEquity, then the latest filing_date.",
+        concept_type="instant",
     ),
     "shares_outstanding": AccountingConceptSpec(
         canonical_name="shares_outstanding",
@@ -248,6 +262,7 @@ CONCEPT_SPECS: dict[str, AccountingConceptSpec] = {
         conflict_resolution_rule=(
             "Prefer share-count units, then CommonStockSharesOutstanding, then the latest filing_date."
         ),
+        concept_type="shares",
     ),
     "operating_cash_flow": AccountingConceptSpec(
         canonical_name="operating_cash_flow",
@@ -334,9 +349,9 @@ def concept_priority_lookup() -> dict[str, dict[str, int]]:
 
 
 def source_priority(source_name: str | None) -> int:
-    if source_name == "edgartools_companyfacts":
-        return 0
     if source_name == "sec_companyfacts":
+        return 0
+    if source_name == "edgartools_companyfacts":
         return 1
     return 9
 

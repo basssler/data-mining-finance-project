@@ -34,7 +34,7 @@ The code is organized around feature layers. A model config chooses which panel 
 - Layer 3, text and event signals: SEC filing sentiment, grouped filing events, analyst signals, and external/news sentiment features.
 - Quarterly event layer: converts filings into tradable events, assigns event timing, builds event identifiers, and keeps one row per filing event.
 - Quarterly feature-design layer: adds deltas, cross-sectional context, Alpha Vantage surprise/revision features, event-aware market features, and event-specific sentiment features.
-- Label layer: creates future excess-return labels such as 10-day, 21-day, and 63-day sign, thresholded, or quantile targets.
+- Label layer: creates future excess-return labels; the active final quarterly target is the 63-trading-day sector-relative sign label.
 - Modeling layer: trains configured model families, applies purged time-series validation, writes benchmarks, SHAP summaries, concentration diagnostics, and validation artifacts.
 
 ## Requirements
@@ -63,8 +63,8 @@ Most tester-friendly runs expect the checked-in or locally generated parquet art
 
 - `data/interim/event_panel_v2_quarterly_feature_design.parquet`
 - `data/interim/prices/prices_with_labels.parquet`
-- `outputs/quarterly/labels/label_map_excess_21d.parquet`
 - `outputs/quarterly/labels/label_map_excess_63d.parquet`
+- `outputs/quarterly/labels/label_map_excess_21d.parquet` for historical comparison only
 - `outputs/quarterly/panels/quarterly_event_panel_features.parquet`
 
 If those files are present, you can train immediately. If they are missing, use the rebuild steps below.
@@ -87,7 +87,7 @@ python -m pytest
 Run the main quarterly benchmark:
 
 ```powershell
-python src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly.yaml
+python src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly_63d_sector_relative.yaml
 ```
 
 Run the active quarterly stability candidate:
@@ -98,8 +98,8 @@ python src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly_sta
 
 After training, inspect:
 
-- `reports/results/event_panel_v2_quarterly_benchmark.md`
-- `reports/results/event_panel_v2_quarterly_benchmark.csv`
+- `reports/results/event_panel_v2_quarterly_63d_sector_relative_benchmark.md`
+- `reports/results/event_panel_v2_quarterly_63d_sector_relative_benchmark.csv`
 - `reports/results/event_panel_v2_quarterly_stability_core_additive_benchmark.md`
 - `reports/results/event_panel_v2_quarterly_stability_core_additive_benchmark.csv`
 - `outputs/quarterly/validation/`
@@ -135,7 +135,7 @@ This updates quarterly workflow artifacts such as `outputs/quarterly/diagnostics
 4. Train a benchmark:
 
 ```powershell
-python src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly.yaml
+python src\train_event_panel_v2.py --config configs\event_panel_v2_quarterly_63d_sector_relative.yaml
 ```
 
 ## Optional Model Runs
@@ -170,7 +170,7 @@ Do not promote a model from holdout AUC alone. The quarterly workflow also check
 - Missing parquet file: run the rebuild steps or confirm the required data artifact exists in `data/interim/` or `outputs/quarterly/`.
 - Import error for `xgboost`, `lightgbm`, `catboost`, `shap`, or `transformers`: rerun `python -m pip install -r requirements.txt` inside the virtual environment.
 - CUDA or GPU warnings from XGBoost: configs are set to prefer GPU only when the local stack supports it cleanly and otherwise fall back to CPU.
-- Long runtime: start with `python -m pytest` or `configs/event_panel_v2_quarterly.yaml` before running tuned configs with many trials.
+- Long runtime: start with `python -m pytest` or `configs/event_panel_v2_quarterly_63d_sector_relative.yaml` before running tuned configs with many trials.
 - PowerShell activation error: use the `Set-ExecutionPolicy` command shown in the requirements section.
 
 ## Useful Docs

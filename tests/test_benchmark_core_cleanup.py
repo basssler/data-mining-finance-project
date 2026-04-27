@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
 
 from src.label_comparison_event_v2 import (
     build_daily_label_table,
@@ -181,12 +182,38 @@ class BenchmarkCoreCleanupTests(unittest.TestCase):
         self.assertEqual(first_fold["purge_window_metadata"]["embargo_end_date"], str(dates[251].date()))
 
     def test_quarterly_benchmark_markdown_does_not_contain_5_day_label_text(self) -> None:
-        markdown_path = Path("reports/results/event_panel_v2_quarterly_benchmark.md")
+        markdown_path = Path("reports/results/event_panel_v2_quarterly_63d_sector_relative_benchmark.md")
         markdown = markdown_path.read_text(encoding="utf-8")
 
-        self.assertIn("63-trading-day excess return sign", markdown)
+        self.assertIn("63-trading-day sector-relative sign label", markdown)
         self.assertNotIn("5-day", markdown)
         self.assertNotIn("5 trading-day", markdown)
+        self.assertNotIn("21-trading-day", markdown)
+
+    def test_active_quarterly_config_uses_63d_sector_relative_label(self) -> None:
+        config_path = Path("configs/event_panel_v2_quarterly_63d_sector_relative.yaml")
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(config["label"]["variant_name"], "event_v2_63d_sector_relative_sign")
+        self.assertEqual(config["label"]["horizon_days"], 63)
+        self.assertEqual(config["label"]["mode"], "sign")
+        self.assertEqual(config["label"]["path"], "outputs/quarterly/labels/label_map_excess_63d.parquet")
+        self.assertEqual(config["label"]["benchmark_mode"], "sector_equal_weight_ex_self")
+        self.assertEqual(config["metadata"]["label_description"], "63-trading-day sector-relative sign label")
+        self.assertNotIn("21d", config["label"]["path"])
+
+    def test_active_defaults_do_not_point_to_21d_quarterly_config(self) -> None:
+        current = yaml.safe_load(Path("configs/quarterly/current_benchmark_set.yaml").read_text(encoding="utf-8"))
+        project_config = Path("src/project_config.py").read_text(encoding="utf-8")
+
+        self.assertEqual(current["label_variant"], "event_v2_63d_sector_relative_sign")
+        self.assertEqual(current["baseline_config"], "configs/event_panel_v2_quarterly_63d_sector_relative.yaml")
+        self.assertEqual(
+            current["active_benchmark_anchor_config"],
+            "configs/event_panel_v2_quarterly_63d_sector_relative.yaml",
+        )
+        self.assertIn('"baseline_config": "configs/event_panel_v2_quarterly_63d_sector_relative.yaml"', project_config)
+        self.assertNotIn('"baseline_config": "configs/event_panel_v2_quarterly.yaml"', project_config)
 
 
 if __name__ == "__main__":

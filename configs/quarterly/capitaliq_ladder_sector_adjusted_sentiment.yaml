@@ -1,0 +1,96 @@
+panel:
+  path: outputs/quarterly/panels/quarterly_event_panel_sector_sentiment_capitaliq.parquet
+  name: capitaliq_ladder_sector_adjusted_sentiment
+prices:
+  path: data/interim/prices/prices_with_labels.parquet
+label:
+  variant_name: event_v2_63d_sign
+  horizon_days: 63
+  mode: sign
+  benchmark_mode: sector_equal_weight_ex_self
+holdout:
+  start: '2024-01-01'
+cv:
+  n_splits: 5
+  embargo_days: 5
+  min_train_dates: 252
+models:
+- logistic_regression
+- random_forest
+- xgboost
+feature_inclusions:
+  additional:
+  - sent_mean_7d
+  - sent_mean_30d
+  - sent_mean_63d
+  - sent_vol_30d
+  - sent_vol_63d
+  - news_count_7d
+  - news_count_30d
+  - news_count_63d
+  - sent_momentum_7v30
+  - sent_momentum_30v63
+  - confidence_mean_30d
+  - has_news_7d
+  - has_news_30d
+  - has_news_63d
+  - low_news_coverage_30d
+  - low_news_coverage_63d
+  - sector_sent_mean_30d
+  - sector_sent_mean_63d
+  - sector_news_count_30d
+  - sector_news_count_63d
+  - sector_adj_sent_30d
+  - sector_adj_sent_63d
+  - sector_adj_news_share_30d
+  - sector_adj_news_share_63d
+feature_exclusions:
+  explicit:
+  - gross_margin
+  - current_filing_sentiment_available
+  - rel_return_5d
+  - rel_return_10d
+  - overnight_gap_1d
+  - abs_return_shock_1d
+  - volume_ratio_20d
+  - log_volume
+  - abnormal_volume_flag
+  - sec_sentiment_score
+  - sec_positive_prob
+  - sec_negative_prob
+  - sec_neutral_prob
+  - sec_sentiment_abs
+  - sec_sentiment_change_prev
+  - sec_positive_change_prev
+  - sec_negative_change_prev
+  - sec_chunk_count
+  - sec_log_chunk_count
+  auto_drop_all_missing: true
+  auto_drop_constant: true
+  max_missingness_pct: 20.0
+xgboost:
+  prefer_gpu_if_clean: true
+  fallback_to_cpu: true
+random_seed:
+  python: 42
+  numpy: 42
+  sklearn: 42
+  xgboost: 42
+promotion:
+  strategy: stability_aware
+metadata:
+  report_title: 'Capital IQ Ladder D: Core + Market + Within-Sector Adjusted Sentiment'
+  label_description: 63-trading-day excess return sign
+  panel_display_name: capitaliq_ladder_sector_adjusted_sentiment
+  setup_note: Capital IQ Key Developments raw, sector-context, and within-sector adjusted
+    zero-shot FinBERT sentiment added to the quarterly core plus market control.
+  interpretation_note: Because v1 is all Consumer Staples, sector-adjusted sentiment
+    is within-sector relative sentiment.
+  experiment_family: quarterly_core_plus_market_plus_capitaliq_sector_adjusted_sentiment
+  design_note: capitaliq_keydev_within_sector_adjusted_zero_shot_finbert
+outputs:
+  csv: outputs/quarterly/modeling/capitaliq_ladder_sector_adjusted_sentiment.csv
+  markdown: outputs/quarterly/modeling/capitaliq_ladder_sector_adjusted_sentiment.md
+  shap_plot: outputs/quarterly/modeling/capitaliq_ladder_sector_adjusted_sentiment_shap_summary.png
+  shap_csv: outputs/quarterly/modeling/capitaliq_ladder_sector_adjusted_sentiment_shap_importance.csv
+  validation_dir: outputs/quarterly/validation/capitaliq_ladder_sector_adjusted_sentiment

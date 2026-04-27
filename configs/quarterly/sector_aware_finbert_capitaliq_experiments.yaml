@@ -1,0 +1,70 @@
+workflow_name: sector_aware_finbert_capitaliq_quarterly_experiment
+unit_of_observation: one quarterly filing event
+data_source: Capital IQ Key Developments
+implementation_status: ready_for_untuned_model_ladder
+notes:
+  - "Capital IQ Key Developments sentiment is tested as an incremental event-text feature layer in the quarterly Consumer Staples panel."
+  - "Do not interpret these experiments as a claim that FinBERT predicts stocks."
+  - "This is zero-shot FinBERT plus within-sector feature engineering, not sector-specific model tuning."
+  - "News/event text features must be built with key_development_date strictly before the event prediction date."
+  - "Because v1 is all Consumer Staples, sector-adjusted sentiment is within-sector relative sentiment."
+
+panel:
+  path: outputs/quarterly/panels/quarterly_event_panel_sector_sentiment_capitaliq.parquet
+
+feature_columns:
+  capitaliq_raw_sentiment:
+    - sent_mean_7d
+    - sent_mean_30d
+    - sent_mean_63d
+    - sent_vol_30d
+    - sent_vol_63d
+    - news_count_7d
+    - news_count_30d
+    - news_count_63d
+    - sent_momentum_7v30
+    - sent_momentum_30v63
+    - confidence_mean_30d
+    - has_news_7d
+    - has_news_30d
+    - has_news_63d
+    - low_news_coverage_30d
+    - low_news_coverage_63d
+  capitaliq_sector_context:
+    - sector_sent_mean_30d
+    - sector_sent_mean_63d
+    - sector_news_count_30d
+    - sector_news_count_63d
+  capitaliq_sector_adjusted_sentiment:
+    - sector_adj_sent_30d
+    - sector_adj_sent_63d
+    - sector_adj_news_share_30d
+    - sector_adj_news_share_63d
+
+comparison:
+  - experiment_family: quarterly_core
+    title: "Quarterly core"
+    config_path: configs/quarterly/capitaliq_ladder_core.yaml
+    added_feature_blocks: []
+  - experiment_family: quarterly_core_plus_market
+    title: "Quarterly core + market"
+    config_path: configs/quarterly/capitaliq_ladder_core_plus_market.yaml
+    added_feature_blocks:
+      - event_aware_market
+  - experiment_family: quarterly_core_plus_market_plus_capitaliq_raw_sentiment
+    title: "Quarterly core + market + Capital IQ raw sentiment"
+    config_path: configs/quarterly/capitaliq_ladder_raw_sentiment.yaml
+    added_feature_blocks:
+      - capitaliq_raw_sentiment
+  - experiment_family: quarterly_core_plus_market_plus_capitaliq_sector_adjusted_sentiment
+    title: "Quarterly core + market + Capital IQ within-sector adjusted sentiment"
+    config_path: configs/quarterly/capitaliq_ladder_sector_adjusted_sentiment.yaml
+    added_feature_blocks:
+      - capitaliq_raw_sentiment
+      - capitaliq_sector_context
+      - capitaliq_sector_adjusted_sentiment
+
+diagnostics:
+  source_markdown_path: outputs/quarterly/diagnostics/sector_sentiment_feature_diagnostics_capitaliq.md
+  pre_model_audit_path: outputs/quarterly/diagnostics/capitaliq_sentiment_pre_model_audit.md
+  comparison_report_path: outputs/quarterly/modeling/capitaliq_sentiment_comparison.md

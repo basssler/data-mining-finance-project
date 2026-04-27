@@ -5,9 +5,9 @@ Use this file as the canonical running log for quarterly experiments.
 ## Current Canonical State
 
 - Live modeling unit: one quarterly filing event
-- Live target: `event_v2_21d_excess_threshold`
+- Live target: `event_v2_63d_sector_relative_sign`
 - Live validation: `5`-fold purged expanding-window CV with `2024-01-01` holdout start
-- Baseline config: `configs/event_panel_v2_quarterly.yaml`
+- Baseline config: `configs/event_panel_v2_quarterly_63d_sector_relative.yaml`
 - Active benchmark anchor config: `configs/quarterly/quarterly_phase9_event_specific_sentiment_champion_v1.yaml`
 - Active candidate config: none
 - Promotion registry: `docs/quarterly/promoted_models.md`

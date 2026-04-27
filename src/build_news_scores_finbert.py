@@ -39,6 +39,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--min-text-length", type=int, default=5)
     parser.add_argument("--fail-on-empty", action="store_true")
+    parser.add_argument(
+        "--checkpoint-output",
+        default="",
+        help="CSV checkpoint path. Defaults to the output path with .checkpoint.csv appended.",
+    )
+    parser.add_argument(
+        "--no-resume",
+        action="store_true",
+        help="Ignore any existing checkpoint and start scoring from scratch.",
+    )
     return parser.parse_args()
 
 
@@ -63,6 +73,22 @@ def write_frame(df: pd.DataFrame, path: Path) -> None:
         df.to_parquet(path, index=False)
         return
     raise ValueError(f"Unsupported output extension for {path}; expected .csv or .parquet")
+
+
+def default_checkpoint_path(output_path: Path) -> Path:
+    return output_path.with_name(output_path.name + ".checkpoint.csv")
+
+
+def append_checkpoint(df: pd.DataFrame, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    header = not path.exists()
+    df.to_csv(path, mode="a", index=False, header=header)
+
+
+def load_checkpoint(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path, parse_dates=["date"])
 
 
 def resolve_column(df: pd.DataFrame, explicit: str, candidates: tuple[str, ...], role: str) -> str:
@@ -229,6 +255,44 @@ def score_texts_with_finbert(
     return pd.DataFrame(rows)
 
 
+def score_text_batch(
+    texts: list[str],
+    *,
+    tokenizer,
+    model,
+    device: str,
+    label_mapping: dict[str, int],
+    torch_module,
+) -> pd.DataFrame:
+    encoded = tokenizer(
+        texts,
+        padding=True,
+        truncation=True,
+        max_length=512,
+        return_tensors="pt",
+    )
+    encoded = {key: value.to(device) for key, value in encoded.items()}
+    with torch_module.no_grad():
+        logits = model(**encoded).logits
+        probabilities = torch_module.softmax(logits, dim=-1).detach().cpu().numpy()
+
+    rows: list[dict[str, float]] = []
+    for probs in probabilities:
+        pos = float(probs[label_mapping["positive"]])
+        neu = float(probs[label_mapping["neutral"]])
+        neg = float(probs[label_mapping["negative"]])
+        rows.append(
+            {
+                "finbert_pos": pos,
+                "finbert_neu": neu,
+                "finbert_neg": neg,
+                "confidence": max(pos, neu, neg),
+                "finbert_score": pos - neg,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def default_scorer(texts: list[str], *, batch_size: int, device_arg: str) -> pd.DataFrame:
     tokenizer, model, device, label_mapping, torch_module = load_finbert_components(device_arg)
     print(f"Loaded {MODEL_NAME} on {device}")
@@ -243,6 +307,65 @@ def default_scorer(texts: list[str], *, batch_size: int, device_arg: str) -> pd.
     )
 
 
+def score_prepared_with_checkpoint(
+    prepared: pd.DataFrame,
+    *,
+    batch_size: int,
+    device_arg: str,
+    checkpoint_path: Path,
+    resume: bool,
+) -> pd.DataFrame:
+    checkpoint_df = load_checkpoint(checkpoint_path) if resume else pd.DataFrame()
+    if not checkpoint_df.empty:
+        checkpoint_df = checkpoint_df.drop_duplicates(subset=["text_id"], keep="last").copy()
+        completed_ids = set(pd.to_numeric(checkpoint_df["text_id"], errors="coerce").dropna().astype("int64"))
+        remaining = prepared.loc[~prepared["text_id"].isin(completed_ids)].copy()
+        print(f"Resuming from checkpoint: {checkpoint_path}")
+        print(f"Checkpoint rows loaded: {len(checkpoint_df):,}")
+    else:
+        checkpoint_df = pd.DataFrame()
+        remaining = prepared.copy()
+
+    if remaining.empty:
+        print("Checkpoint already covers all prepared rows; writing final output from checkpoint.")
+        return checkpoint_df.sort_values("text_id").reset_index(drop=True)
+
+    tokenizer, model, device, label_mapping, torch_module = load_finbert_components(device_arg)
+    print(f"Loaded {MODEL_NAME} on {device}")
+    total = len(prepared)
+    completed_before = total - len(remaining)
+    scored_batches: list[pd.DataFrame] = []
+    for start in range(0, len(remaining), int(batch_size)):
+        batch = remaining.iloc[start : start + int(batch_size)].copy()
+        score_df = score_text_batch(
+            batch["headline"].astype(str).tolist(),
+            tokenizer=tokenizer,
+            model=model,
+            device=device,
+            label_mapping=label_mapping,
+            torch_module=torch_module,
+        )
+        batch_output = pd.concat(
+            [
+                batch[["ticker", "date"]].reset_index(drop=True),
+                score_df.reset_index(drop=True),
+                batch[[column for column in ["headline", "text_id", "source"] if column in batch.columns]].reset_index(
+                    drop=True
+                ),
+            ],
+            axis=1,
+        )
+        append_checkpoint(batch_output, checkpoint_path)
+        scored_batches.append(batch_output)
+        completed = completed_before + min(start + int(batch_size), len(remaining))
+        print(f"Checkpointed {completed:,} / {total:,} news rows to {checkpoint_path}")
+
+    new_scores = pd.concat(scored_batches, ignore_index=True) if scored_batches else pd.DataFrame()
+    combined = pd.concat([checkpoint_df, new_scores], ignore_index=True, sort=False)
+    combined = combined.drop_duplicates(subset=["text_id"], keep="last")
+    return combined.sort_values("text_id").reset_index(drop=True)
+
+
 def build_news_scores_finbert(
     args: argparse.Namespace,
     *,
@@ -250,6 +373,7 @@ def build_news_scores_finbert(
 ) -> pd.DataFrame:
     input_path = Path(args.input_news)
     output_path = Path(args.output)
+    checkpoint_path = Path(args.checkpoint_output) if args.checkpoint_output else default_checkpoint_path(output_path)
     news_df = read_frame(input_path)
     ticker_col = resolve_column(news_df, args.ticker_col, TICKER_CANDIDATES, "ticker")
     date_col = resolve_column(news_df, args.date_col, DATE_CANDIDATES, "date")
@@ -276,7 +400,25 @@ def build_news_scores_finbert(
 
     texts = prepared["headline"].astype(str).tolist()
     if scorer is None:
-        scores = default_scorer(texts, batch_size=int(args.batch_size), device_arg=args.device)
+        output = score_prepared_with_checkpoint(
+            prepared,
+            batch_size=int(args.batch_size),
+            device_arg=args.device,
+            checkpoint_path=checkpoint_path,
+            resume=not bool(args.no_resume),
+        )
+        write_frame(output, output_path)
+        print("FinBERT news scoring complete.")
+        print(f"Input news:      {input_path}")
+        print(f"Output scores:   {output_path}")
+        print(f"Checkpoint:      {checkpoint_path}")
+        print(f"Rows scored:     {len(output):,}")
+        print(f"Ticker column:   {ticker_col}")
+        print(f"Date column:     {date_col}")
+        print(f"Text column:     {text_col}")
+        if source_col:
+            print(f"Source column:   {source_col}")
+        return output
     else:
         scores = scorer(texts)
     required_score_columns = ["finbert_pos", "finbert_neu", "finbert_neg", "confidence"]

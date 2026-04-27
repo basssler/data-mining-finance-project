@@ -1,11 +1,12 @@
 workflow_name: quarterly_event_panel_canonical
 unit_of_observation: one quarterly filing event
-label_variant: event_v2_21d_excess_threshold
+label_variant: event_v2_63d_sector_relative_sign
 validation_policy: 5-fold purged expanding window with 2024 holdout
-baseline_config: configs/event_panel_v2_quarterly.yaml
-active_benchmark_anchor_config: configs/quarterly/quarterly_core_no_market_anchor_v1.yaml
+baseline_config: configs/event_panel_v2_quarterly_63d_sector_relative.yaml
+active_benchmark_anchor_config: configs/event_panel_v2_quarterly_63d_sector_relative.yaml
 active_candidate_config: ""
 comparison_configs:
+  - configs/event_panel_v2_quarterly_63d_sector_relative.yaml
   - configs/event_panel_v2_quarterly_feature_design_core.yaml
   - configs/event_panel_v2_quarterly_feature_design_medium_market.yaml
   - configs/event_panel_v2_quarterly_feature_design_sentiment.yaml

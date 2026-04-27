@@ -1,0 +1,66 @@
+# Canonical final quarterly project config.
+# Uses the 63-trading-day sector-relative sign label. This config is the active
+# default for final reporting; 21-day configs are retained only for historical
+# comparison.
+
+panel:
+  path: outputs/quarterly/panels/quarterly_event_panel_features.parquet
+  name: event_panel_v2_quarterly_63d_sector_relative
+
+label:
+  variant_name: event_v2_63d_sector_relative_sign
+  horizon_days: 63
+  mode: sign
+  path: outputs/quarterly/labels/label_map_excess_63d.parquet
+  benchmark_mode: sector_equal_weight_ex_self
+
+holdout:
+  start: "2024-01-01"
+
+cv:
+  n_splits: 5
+  embargo_days: 5
+  min_train_dates: 252
+
+models:
+  - logistic_regression
+  - random_forest
+  - xgboost
+
+feature_exclusions:
+  explicit:
+    - gross_margin
+    - current_filing_sentiment_available
+  auto_drop_all_missing: true
+  auto_drop_constant: true
+  max_missingness_pct: 20.0
+
+xgboost:
+  prefer_gpu_if_clean: true
+  fallback_to_cpu: true
+  note: "GPU is used only when the local stack supports clean CUDA prediction without the device-mismatch warning."
+
+random_seed:
+  python: 42
+  numpy: 42
+  sklearn: 42
+  xgboost: 42
+
+promotion:
+  strategy: stability_aware
+
+metadata:
+  report_title: Event Panel V2 Quarterly 63D Sector-Relative Benchmark
+  label_description: 63-trading-day sector-relative sign label
+  panel_display_name: event_panel_v2_quarterly_63d_sector_relative
+  setup_note: "Canonical final quarterly benchmark config using the 63-trading-day sector-relative sign label."
+  interpretation_note: "Use this as the active/default label contract for final project reporting. Historical shorter-horizon outputs are retained only as comparison artifacts."
+  experiment_family: quarterly_final_label_contract
+  design_note: final_63d_sector_relative_sign
+
+outputs:
+  csv: reports/results/event_panel_v2_quarterly_63d_sector_relative_benchmark.csv
+  markdown: reports/results/event_panel_v2_quarterly_63d_sector_relative_benchmark.md
+  shap_plot: reports/results/event_panel_v2_quarterly_63d_sector_relative_shap_summary.png
+  shap_csv: reports/results/event_panel_v2_quarterly_63d_sector_relative_shap_importance.csv
+  validation_dir: outputs/quarterly/validation/event_panel_v2_quarterly_63d_sector_relative

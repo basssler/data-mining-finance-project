@@ -1,5 +1,7 @@
 # Event Panel V2 Quarterly Benchmark
 
+> Legacy 21-day benchmark retained for historical comparison only. Not active for the final quarterly project; use `configs/event_panel_v2_quarterly_63d_sector_relative.yaml` and `reports/results/event_panel_v2_quarterly_63d_sector_relative_benchmark.md` for the canonical 63-trading-day sector-relative sign label contract.
+
 ## Locked Setup
 
 - Primary panel: `event_panel_v2_quarterly`
