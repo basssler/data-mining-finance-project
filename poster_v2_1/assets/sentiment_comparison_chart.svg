@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="310" viewBox="0 0 760 310">
+  <style>.h{font:700 27px Inter;fill:#0f172a}.t{font:700 20px Inter;fill:#0f172a}.s{font:17px Inter;fill:#475569}.card{fill:#fff;stroke:#D9E2EC;stroke-width:2}.hot{fill:#FFF7ED;stroke:#f59e0b;stroke-width:4}.badge{fill:#f59e0b}.badgeText{font:700 16px Inter;fill:#fff}</style>
+  <rect width="760" height="310" rx="22" fill="#F8FAFC"/>
+  <text class="h" x="380" y="38" text-anchor="middle">Sentiment Feature Comparison</text>
+  <g transform="translate(32 72)">
+    <rect class="card" width="155" height="115" rx="16"/><text class="t" x="77" y="42" text-anchor="middle">No sentiment</text><text class="s" x="77" y="74" text-anchor="middle">Core controls</text>
+    <rect class="card" x="178" width="155" height="115" rx="16"/><text class="t" x="255" y="42" text-anchor="middle">Broad filing</text><text class="s" x="255" y="74" text-anchor="middle">SEC text</text>
+    <rect class="hot" x="356" width="170" height="135" rx="16"/><text class="t" x="441" y="38" text-anchor="middle">Event-specific</text><text class="s" x="441" y="70" text-anchor="middle">Random Forest</text><text class="t" x="441" y="104" text-anchor="middle">AUC 0.5367</text>
+    <rect class="card" x="550" width="155" height="115" rx="16"/><text class="t" x="627" y="42" text-anchor="middle">Combined</text><text class="s" x="627" y="74" text-anchor="middle">Mixed signal</text>
+  </g>
+  <rect class="badge" x="178" y="238" width="404" height="38" rx="19"/>
+  <text class="badgeText" x="380" y="263" text-anchor="middle">Legacy 21d benchmark, not final 63d contract</text>
+  <text class="s" x="380" y="298" text-anchor="middle">Event-specific sentiment looked more useful than broad filing sentiment under the legacy label.</text>
+</svg>

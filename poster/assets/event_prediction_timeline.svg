@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="310" viewBox="0 0 760 310">
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2563EB"/></marker><style>.t{font:700 24px Arial;fill:#0B1F3A}.s{font:18px Arial;fill:#334E68}.line{stroke:#2563EB;stroke-width:5;marker-end:url(#arrow)}.dot{fill:#2563EB}.box{fill:#fff;stroke:#D9E2EC;stroke-width:2}</style></defs>
+  <rect width="760" height="310" rx="22" fill="#F8FAFC"/>
+  <line class="line" x1="70" y1="154" x2="690" y2="154"/>
+  <g transform="translate(28 40)"><circle class="dot" cx="42" cy="114" r="11"/><rect class="box" x="0" y="0" width="100" height="74" rx="12"/><text class="t" x="50" y="27" text-anchor="middle">Fiscal</text><text class="s" x="50" y="54" text-anchor="middle">quarter ends</text></g>
+  <g transform="translate(140 178)"><circle class="dot" cx="50" cy="-24" r="11"/><rect class="box" x="0" y="0" width="100" height="82" rx="12"/><text class="t" x="50" y="28" text-anchor="middle">SEC</text><text class="s" x="50" y="54" text-anchor="middle">accepted</text></g>
+  <g transform="translate(252 40)"><circle class="dot" cx="50" cy="114" r="11"/><rect class="box" x="0" y="0" width="100" height="74" rx="12"/><text class="t" x="50" y="27" text-anchor="middle">Effective</text><text class="s" x="50" y="54" text-anchor="middle">model date</text></g>
+  <g transform="translate(364 178)"><circle class="dot" cx="50" cy="-24" r="11"/><rect class="box" x="0" y="0" width="100" height="82" rx="12"/><text class="t" x="50" y="28" text-anchor="middle">Predict</text><text class="s" x="50" y="54" text-anchor="middle">event row</text></g>
+  <g transform="translate(476 40)"><circle class="dot" cx="50" cy="114" r="11"/><rect class="box" x="0" y="0" width="100" height="74" rx="12"/><text class="t" x="50" y="27" text-anchor="middle">Next 63</text><text class="s" x="50" y="54" text-anchor="middle">trading days</text></g>
+  <g transform="translate(588 178)"><circle class="dot" cx="50" cy="-24" r="11"/><rect class="box" x="0" y="0" width="120" height="82" rx="12"/><text class="t" x="60" y="28" text-anchor="middle">Compare</text><text class="s" x="60" y="54" text-anchor="middle">stock vs sector</text></g>
+</svg>

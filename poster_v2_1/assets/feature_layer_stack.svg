@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="330" viewBox="0 0 980 330">
+  <style>.h{font:700 30px Inter;fill:#0f172a}.t{font:700 25px Inter;fill:#0f172a}.s{font:20px Inter;fill:#475569}.one{fill:#EAF2FF;stroke:#9CC2FF}.two{fill:#ECFDF5;stroke:#A7F3D0}.three{fill:#FFF7ED;stroke:#FDBA74}.card{stroke-width:3}</style>
+  <rect width="980" height="330" rx="22" fill="#F8FAFC"/>
+  <text class="h" x="490" y="45" text-anchor="middle">Controlled Feature-Addition Experiment</text>
+  <g transform="translate(60 78)">
+    <rect class="card one" width="860" height="64" rx="18"/><text class="t" x="28" y="40">Layer 1</text><text class="s" x="245" y="40">Margins | ROA | Leverage | Growth</text>
+    <rect class="card two" y="86" width="860" height="64" rx="18"/><text class="t" x="28" y="126">Layer 2</text><text class="s" x="245" y="126">Returns | Volatility | Volume | Drawdowns</text>
+    <rect class="card three" y="172" width="860" height="64" rx="18"/><text class="t" x="28" y="212">Layer 3</text><text class="s" x="245" y="212">SEC tone | Event sentiment | EPS surprise</text>
+  </g>
+</svg>

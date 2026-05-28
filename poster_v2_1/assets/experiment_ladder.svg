@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="480" viewBox="0 0 760 480">
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2563EB"/></marker><style>.h{font:700 28px Arial;fill:#0B1F3A}.t{font:700 22px Arial;fill:#0B1F3A}.s{font:18px Arial;fill:#334E68}.box{fill:#fff;stroke:#D9E2EC;stroke-width:2}.final{fill:#ECFDF5;stroke:#A7F3D0;stroke-width:3}.line{stroke:#2563EB;stroke-width:4;marker-end:url(#arrow)}</style></defs>
+  <rect width="760" height="480" rx="22" fill="#F8FAFC"/>
+  <text class="h" x="380" y="38" text-anchor="middle">Project Evolution and Results Framing</text>
+  <g transform="translate(70 62)">
+    <rect class="box" width="330" height="46" rx="13"/><text class="t" x="22" y="30">Daily 5-day baseline</text><text class="s" x="430" y="30">Historical comparator only</text>
+    <line class="line" x1="165" y1="50" x2="165" y2="65"/>
+    <rect class="box" y="70" width="330" height="46" rx="13"/><text class="t" x="22" y="100">Quarterly event panel</text><text class="s" x="430" y="100">Better event framing</text>
+    <line class="line" x1="165" y1="120" x2="165" y2="135"/>
+    <rect class="box" y="140" width="330" height="46" rx="13"/><text class="t" x="22" y="170">Expanded accounting</text><text class="s" x="430" y="170">Defensible baseline</text>
+    <line class="line" x1="165" y1="190" x2="165" y2="205"/>
+    <rect class="box" y="210" width="330" height="46" rx="13"/><text class="t" x="22" y="240">Market context tests</text><text class="s" x="430" y="240">Mixed / not promoted</text>
+    <line class="line" x1="165" y1="260" x2="165" y2="275"/>
+    <rect class="box" y="280" width="330" height="46" rx="13"/><text class="t" x="22" y="310">Sentiment/event features</text><text class="s" x="430" y="310">Promising under legacy 21d</text>
+    <line class="line" x1="165" y1="330" x2="165" y2="345"/>
+    <rect class="final" y="350" width="330" height="46" rx="13"/><text class="t" x="22" y="380">Final 63d sector-relative</text><text class="s" x="430" y="380">Final active project contract</text>
+  </g>
+</svg>

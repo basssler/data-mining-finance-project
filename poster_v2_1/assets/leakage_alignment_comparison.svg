@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="360" viewBox="0 0 1020 360">
+  <defs><marker id="redArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#DC2626"/></marker><marker id="greenArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#10b981"/></marker><style>.h{font:700 28px Inter;fill:#0f172a}.t{font:700 20px Inter;fill:#0f172a}.s{font:17px Inter;fill:#475569}.bad{fill:#FEF2F2;stroke:#FCA5A5;stroke-width:3}.good{fill:#ECFDF5;stroke:#A7F3D0;stroke-width:3}.box{fill:#fff;stroke:#D9E2EC;stroke-width:2}.rline{stroke:#DC2626;stroke-width:4;marker-end:url(#redArrow)}.gline{stroke:#10b981;stroke-width:4;marker-end:url(#greenArrow)}</style></defs>
+  <rect width="1020" height="360" rx="22" fill="#F8FAFC"/>
+  <rect class="bad" x="25" y="35" width="340" height="285" rx="18"/>
+  <rect class="good" x="395" y="35" width="340" height="285" rx="18"/>
+  <text class="h" x="195" y="75" text-anchor="middle">Bad Setup</text>
+  <text class="h" x="565" y="75" text-anchor="middle">Correct Setup</text>
+  <g transform="translate(48 110)"><rect class="box" width="82" height="68" rx="12"/><text class="t" x="41" y="27" text-anchor="middle">Fiscal</text><text class="s" x="41" y="51" text-anchor="middle">period end</text></g>
+  <line class="rline" x1="138" y1="144" x2="205" y2="144"/>
+  <g transform="translate(214 103)"><rect class="box" width="118" height="82" rx="12"/><text class="t" x="59" y="28" text-anchor="middle">Uses data</text><text class="s" x="59" y="53" text-anchor="middle">before filing</text></g>
+  <text class="s" x="195" y="238" text-anchor="middle">Filing facts enter too early</text>
+  <text class="t" x="195" y="272" text-anchor="middle" fill="#991B1B">Look-ahead bias</text>
+  <g transform="translate(418 112)"><rect class="box" width="80" height="66" rx="12"/><text class="t" x="40" y="27" text-anchor="middle">Fiscal</text><text class="s" x="40" y="51" text-anchor="middle">end</text></g>
+  <line class="gline" x1="506" y1="145" x2="548" y2="145"/>
+  <g transform="translate(556 112)"><rect class="box" width="92" height="66" rx="12"/><text class="t" x="46" y="27" text-anchor="middle">Filing</text><text class="s" x="46" y="51" text-anchor="middle">accepted</text></g>
+  <line class="gline" x1="656" y1="145" x2="685" y2="145"/>
+  <g transform="translate(632 204)"><rect class="box" width="86" height="66" rx="12"/><text class="t" x="43" y="27" text-anchor="middle">Use</text><text class="s" x="43" y="51" text-anchor="middle">features</text></g>
+  <text class="s" x="540" y="236" text-anchor="middle">Feature use starts after acceptance</text>
+  <text class="t" x="540" y="276" text-anchor="middle" fill="#047857">Allowed timing</text>
+</svg>

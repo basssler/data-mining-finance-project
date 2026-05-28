@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="300" viewBox="0 0 760 300">
+  <style>.h{font:700 27px Inter;fill:#0f172a}.t{font:700 19px Inter;fill:#0f172a}.s{font:17px Inter;fill:#475569}.axis{stroke:#CBD5E1;stroke-width:2}.base{stroke:#f59e0b;stroke-width:4;stroke-dasharray:8 8}.bar{fill:#2563EB}.weak{fill:#94A3B8}.hold{fill:#10b981}</style>
+  <rect width="760" height="300" rx="22" fill="#F8FAFC"/>
+  <text class="h" x="380" y="38" text-anchor="middle">63d Stability Candidate AUC</text>
+  <line class="axis" x1="85" y1="235" x2="700" y2="235"/><line class="axis" x1="85" y1="70" x2="85" y2="235"/>
+  <line class="base" x1="85" y1="135" x2="700" y2="135"/><text class="s" x="695" y="126" text-anchor="end">0.50 baseline</text>
+  <rect class="bar" x="150" y="83" width="105" height="152" rx="8"/><rect class="weak" x="330" y="161" width="105" height="74" rx="8"/><rect class="hold" x="510" y="159" width="105" height="76" rx="8"/>
+  <text class="t" x="202" y="75" text-anchor="middle">0.5262</text><text class="t" x="382" y="153" text-anchor="middle">0.4735</text><text class="t" x="562" y="151" text-anchor="middle">0.4880</text>
+  <text class="s" x="202" y="264" text-anchor="middle">Mean CV</text><text class="s" x="382" y="264" text-anchor="middle">Worst fold</text><text class="s" x="562" y="264" text-anchor="middle">2024 holdout</text>
+  <text class="s" x="380" y="292" text-anchor="middle">Modest CV signal but weaker holdout performance; not a trading-ready edge.</text>
+</svg>

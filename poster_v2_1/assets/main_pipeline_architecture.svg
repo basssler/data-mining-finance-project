@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="980" viewBox="0 0 1280 980" role="img" aria-labelledby="title desc">
+  <title id="title">Main pipeline architecture</title>
+  <desc id="desc">Raw data sources flow through timing alignment, event panel construction, features, labels, models, and evaluation.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2563EB"/></marker>
+    <style>
+      .title{font:700 34px Inter, Inter, sans-serif;fill:#0f172a}.label{font:700 28px Inter, Inter, sans-serif;fill:#0f172a}.small{font:22px Inter, Inter, sans-serif;fill:#475569}.tiny{font:19px Inter, Inter, sans-serif;fill:#475569}.box{fill:#FFFFFF;stroke:#D9E2EC;stroke-width:3}.blue{fill:#EAF2FF;stroke:#9CC2FF}.green{fill:#ECFDF5;stroke:#A7F3D0}.amber{fill:#FFF7ED;stroke:#FDBA74}.line{stroke:#2563EB;stroke-width:6;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1280" height="980" rx="26" fill="#F8FAFC"/>
+  <text x="640" y="58" text-anchor="middle" class="title">Leakage-Aware Quarterly Filing Event Pipeline</text>
+  <g transform="translate(70 92)">
+    <rect class="box blue" x="0" y="0" width="1140" height="122" rx="20"/>
+    <text x="570" y="38" text-anchor="middle" class="label">Raw Data Sources</text>
+    <text x="570" y="78" text-anchor="middle" class="small">SEC fundamentals | prices | SEC filing text | Alpha Vantage | universe metadata</text>
+  </g>
+  <line class="line" x1="640" y1="225" x2="640" y2="277"/>
+  <g transform="translate(260 290)">
+    <rect class="box" x="0" y="0" width="760" height="92" rx="18"/>
+    <text x="380" y="38" text-anchor="middle" class="label">Cleaning + Timing Alignment</text>
+    <text x="380" y="68" text-anchor="middle" class="tiny">Use only facts available before the event becomes tradable</text>
+  </g>
+  <line class="line" x1="640" y1="392" x2="640" y2="444"/>
+  <g transform="translate(300 456)">
+    <rect class="box green" x="0" y="0" width="680" height="104" rx="18"/>
+    <text x="340" y="40" text-anchor="middle" class="label">Quarterly Event Panel</text>
+    <text x="340" y="73" text-anchor="middle" class="small">one row = one quarterly filing event</text>
+  </g>
+  <line class="line" x1="640" y1="571" x2="640" y2="615"/>
+  <g transform="translate(95 628)">
+    <rect class="box" x="0" y="0" width="1090" height="142" rx="20"/>
+    <text x="545" y="38" text-anchor="middle" class="label">Feature Layers</text>
+    <rect x="42" y="60" width="310" height="54" rx="14" fill="#EAF2FF" stroke="#9CC2FF" stroke-width="2"/>
+    <rect x="390" y="60" width="310" height="54" rx="14" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="2"/>
+    <rect x="738" y="60" width="310" height="54" rx="14" fill="#FFF7ED" stroke="#FDBA74" stroke-width="2"/>
+    <text x="197" y="95" text-anchor="middle" class="small">Accounting fundamentals</text>
+    <text x="545" y="95" text-anchor="middle" class="small">Market context</text>
+    <text x="893" y="95" text-anchor="middle" class="small">Sentiment + event signals</text>
+  </g>
+  <line class="line" x1="640" y1="782" x2="640" y2="820"/>
+  <g transform="translate(70 832)">
+    <rect class="box amber" x="0" y="0" width="330" height="90" rx="18"/>
+    <text x="165" y="38" text-anchor="middle" class="label">Target</text>
+    <text x="165" y="67" text-anchor="middle" class="tiny">63-day sector-relative</text>
+    <rect class="box blue" x="405" y="0" width="330" height="90" rx="18"/>
+    <text x="570" y="38" text-anchor="middle" class="label">Models</text>
+    <text x="570" y="67" text-anchor="middle" class="tiny">Logistic | RF | XGBoost</text>
+    <rect class="box green" x="810" y="0" width="330" height="90" rx="18"/>
+    <text x="975" y="38" text-anchor="middle" class="label">Evaluation</text>
+    <text x="975" y="67" text-anchor="middle" class="tiny">Purged CV | 2024 holdout | SHAP</text>
+  </g>
+</svg>

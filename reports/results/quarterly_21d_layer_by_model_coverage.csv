@@ -1,0 +1,42 @@
+layer_order,layer_slug,layer_title,model_name,n_validation_folds,auc_mean,f1_mean,log_loss_mean
+1,final_core_confirmation,Final core confirmation,logistic_regression,5,0.5684607577249143,0.5372746494798734,1.0273560979751015
+1,final_core_confirmation,Final core confirmation,random_forest,5,0.5126385158457065,0.5065551377777466,0.7009198009412997
+1,final_core_confirmation,Final core confirmation,xgboost,5,0.51230131988588,0.5333074331914166,0.8477403156690405
+2,phase8_core_no_market,"Phase 8 core, no market",logistic_regression,5,0.5684607577249143,0.5372746494798734,1.0273560979751015
+2,phase8_core_no_market,"Phase 8 core, no market",random_forest,5,0.5126385158457065,0.5065551377777466,0.7009198009412997
+2,phase8_core_no_market,"Phase 8 core, no market",xgboost,5,0.51230131988588,0.5333074331914166,0.8477403156690405
+3,phase8_generic_market_only,Phase 8 generic market only,logistic_regression,5,0.5652587131390087,0.548537832681055,1.1751297637405547
+3,phase8_generic_market_only,Phase 8 generic market only,random_forest,5,0.5123538449078248,0.5251125177898632,0.6999154013688004
+3,phase8_generic_market_only,Phase 8 generic market only,xgboost,5,0.5201865822338607,0.5494239074402886,0.8781807019656498
+4,phase8_event_aware_market_only,Phase 8 event-aware market only,logistic_regression,5,0.5780231527873794,0.5739105339105339,1.121984096444669
+4,phase8_event_aware_market_only,Phase 8 event-aware market only,random_forest,5,0.5092751768155942,0.502309620204357,0.7012667600265172
+4,phase8_event_aware_market_only,Phase 8 event-aware market only,xgboost,5,0.48703011853709943,0.5242027027027027,0.9364231556298149
+5,phase8_generic_and_event_aware_market,Phase 8 generic + event-aware market,logistic_regression,5,0.5529695500899335,0.5424595224595224,1.2592729653133348
+5,phase8_generic_and_event_aware_market,Phase 8 generic + event-aware market,random_forest,5,0.5053078775369796,0.4969916104382578,0.6993709305077793
+5,phase8_generic_and_event_aware_market,Phase 8 generic + event-aware market,xgboost,5,0.5045092450809618,0.5332093499236508,0.9102770571212183
+6,phase9_core_no_sentiment,"Phase 9 core, no sentiment",logistic_regression,5,0.5684607577249143,0.5372746494798734,1.0273560979751015
+6,phase9_core_no_sentiment,"Phase 9 core, no sentiment",random_forest,5,0.5126385158457065,0.5065551377777466,0.7009198009412997
+6,phase9_core_no_sentiment,"Phase 9 core, no sentiment",xgboost,5,0.51230131988588,0.5333074331914166,0.8477403156690405
+7,phase9_broad_filing_sentiment_only,Phase 9 broad filing sentiment only,logistic_regression,5,0.560488944689364,0.5356073403572384,1.087962439739701
+7,phase9_broad_filing_sentiment_only,Phase 9 broad filing sentiment only,random_forest,5,0.5162339525139685,0.5094287639315243,0.7000266860832461
+7,phase9_broad_filing_sentiment_only,Phase 9 broad filing sentiment only,xgboost,5,0.5156274016073478,0.5411753946011932,0.8528646668214973
+8,phase9_event_specific_sentiment_only,Phase 9 event-specific sentiment only,logistic_regression,5,0.5682457465323939,0.5728558545067306,1.0652564358943244
+8,phase9_event_specific_sentiment_only,Phase 9 event-specific sentiment only,random_forest,5,0.5210165281814738,0.5001722261611115,0.7000558314184486
+8,phase9_event_specific_sentiment_only,Phase 9 event-specific sentiment only,xgboost,5,0.5185858357007463,0.5366763339177132,0.857050058979999
+9,phase9_combined_sentiment_block,Phase 9 combined sentiment block,logistic_regression,5,0.5747074415092991,0.5778077731329401,1.0623675606972145
+9,phase9_combined_sentiment_block,Phase 9 combined sentiment block,random_forest,5,0.5015419076989236,0.49114183023533997,0.7043471732572583
+9,phase9_combined_sentiment_block,Phase 9 combined sentiment block,xgboost,5,0.5165205189098329,0.5677254703046891,0.8671935904354872
+10,phase9_event_specific_sentiment_champion,Phase 9 event-specific sentiment champion,logistic_regression,5,0.5682457465323939,0.5728558545067306,1.0652564358943244
+10,phase9_event_specific_sentiment_champion,Phase 9 event-specific sentiment champion,random_forest,5,0.5210165281814738,0.5001722261611115,0.7000558314184486
+10,phase9_event_specific_sentiment_champion,Phase 9 event-specific sentiment champion,xgboost,5,0.5185858357007463,0.5366763339177132,0.857050058979999
+11,tuned_model_upgrade_v1,Tuned model upgrade v1,catboost,5,0.5598361111795647,0.542973049777264,0.927820729329663
+11,tuned_model_upgrade_v1,Tuned model upgrade v1,hist_gradient_boosting,5,0.5222008875042532,0.5475692071305232,0.9787563805006474
+11,tuned_model_upgrade_v1,Tuned model upgrade v1,lightgbm,5,0.5114925229236624,0.5021372465710146,0.7289685672639765
+11,tuned_model_upgrade_v1,Tuned model upgrade v1,logistic_regression,5,0.5725605992152482,0.5555150232153343,1.104355320903241
+11,tuned_model_upgrade_v1,Tuned model upgrade v1,random_forest,5,0.5162212279592086,0.5135144717822218,0.7008348147150233
+11,tuned_model_upgrade_v1,Tuned model upgrade v1,xgboost,5,0.5425726776546911,0.5503509531404268,0.9759627872050795
+12,tuned_model_upgrade_pass2_v1,Tuned model upgrade pass 2,catboost,5,0.5435814598885806,0.5721664862617848,0.8241870305161614
+12,tuned_model_upgrade_pass2_v1,Tuned model upgrade pass 2,hist_gradient_boosting,5,0.5222008875042532,0.5475692071305232,0.9787563805006474
+12,tuned_model_upgrade_pass2_v1,Tuned model upgrade pass 2,logistic_regression,5,0.5725605992152482,0.5555150232153343,1.104355320903241
+12,tuned_model_upgrade_pass2_v1,Tuned model upgrade pass 2,random_forest,5,0.5162212279592086,0.5135144717822218,0.7008348147150233
+12,tuned_model_upgrade_pass2_v1,Tuned model upgrade pass 2,xgboost,5,0.5471434077402119,0.5586415087864363,0.7543332889005706

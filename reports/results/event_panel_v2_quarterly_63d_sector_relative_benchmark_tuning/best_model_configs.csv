@@ -1,0 +1,4 @@
+model_name,used_tuning,tuned_model_params
+logistic_regression,False,{}
+random_forest,False,{}
+xgboost,False,{}

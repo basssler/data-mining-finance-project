@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentiment-Augmented Quarterly Stock Prediction Poster</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <article class="poster" aria-label="Academic poster for data mining finance project">
+    <header class="header">
+      <div>
+        <h1>Sentiment-Augmented Quarterly Stock Prediction</h1>
+        <p class="subtitle">A leakage-aware supervised learning pipeline for predicting 63-day sector-relative stock performance after quarterly filing events</p>
+        <div class="thesis">
+          This project tests whether accounting fundamentals, market context, and sentiment/event-specific features can predict whether a stock will outperform its sector after a quarterly filing event.
+        </div>
+      </div>
+      <aside class="author-block">
+        <strong>Max Bassler</strong>
+        <span>INEG 41403 Data Mining</span>
+        <span>University of Arkansas</span>
+        <span>Spring 2026</span>
+      </aside>
+    </header>
+
+    <main class="grid">
+      <section class="column">
+        <div class="card">
+          <h2>Why This Problem Is Difficult</h2>
+          <p>Financial prediction is noisy, time-dependent, and vulnerable to look-ahead bias. A model can appear predictive if it accidentally uses information that would not have been available at the time of prediction.</p>
+          <p>The project therefore focuses on building a fair event-level experiment, not simply maximizing accuracy.</p>
+          <ul class="compact-list">
+            <li>No random train/test splits</li>
+            <li>No future information in features</li>
+            <li>No post-filing facts before they become tradable</li>
+            <li>Labels must not overlap validation windows</li>
+          </ul>
+        </div>
+
+        <div class="card visual-card">
+          <h2>Leakage Control</h2>
+          <img src="assets/leakage_alignment_comparison.svg" alt="Bad versus correct leakage alignment diagram">
+        </div>
+
+        <div class="card">
+          <h2>Research Question</h2>
+          <p class="lead">Can a machine learning model predict whether a company will outperform its sector over the next 63 trading days after a quarterly filing event?</p>
+          <p><strong>Sub-question:</strong> Do sentiment and event-specific features add predictive value beyond fundamentals and market context?</p>
+          <ol class="hypotheses">
+            <li>Fundamentals provide a weak but useful baseline.</li>
+            <li>Market context may improve event timing.</li>
+            <li>Event-specific sentiment may add incremental signal.</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <h2>Data Sources</h2>
+          <table>
+            <thead>
+              <tr><th>Source</th><th>Role</th><th>Examples</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>SEC EDGAR</td><td>Fundamentals and filings</td><td>10-Q/10-K facts, filing text</td></tr>
+              <tr><td>Market prices</td><td>Returns and volatility</td><td>Pre-event returns, volatility, volume</td></tr>
+              <tr><td>Alpha Vantage</td><td>Earnings metadata</td><td>EPS surprise, revisions, analyst count</td></tr>
+              <tr><td>Capital IQ / universe data</td><td>Company context</td><td>Sector, ticker universe</td></tr>
+              <tr><td>Sentiment model</td><td>Text features</td><td>Positive, negative, neutral probabilities</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card conclusion-card">
+          <h2>Conclusion</h2>
+          <p><strong>The project does not claim to be a finished trading strategy.</strong> It demonstrates a leakage-aware research framework for testing whether financial signals add predictive value around quarterly filing events.</p>
+        </div>
+
+        <div class="card limitations-card">
+          <h2>Limitations and Future Work</h2>
+          <ul class="compact-list">
+            <li>Predictive signal is modest and unstable.</li>
+            <li>Public financial data requires careful timing alignment.</li>
+            <li>SEC filing text can be diluted by boilerplate language.</li>
+            <li>Some promising results are from legacy 21-day experiments, not the final 63-day contract.</li>
+          </ul>
+          <p class="future-work"><strong>Next:</strong> complete the final 63d rerun, add higher-quality market/accounting data, expand event-specific sentiment, and move toward portfolio construction only after signal stability improves.</p>
+        </div>
+      </section>
+
+      <section class="column center-column">
+        <div class="card hero-card visual-card">
+          <h2>Modeling Pipeline</h2>
+          <img src="assets/main_pipeline_architecture.svg" alt="Main modeling pipeline architecture diagram">
+          <p class="caption">Each prediction is made at the filing-event level using only information available before the event becomes tradable.</p>
+        </div>
+
+        <div class="card visual-card">
+          <h2>Feature Design</h2>
+          <img src="assets/feature_layer_stack.svg" alt="Three feature layers for the modeling experiment">
+        </div>
+
+        <div class="split-row">
+          <div class="card visual-card">
+            <h2>Event Timing</h2>
+            <img src="assets/event_prediction_timeline.svg" alt="Event prediction timeline from fiscal quarter end through target construction">
+          </div>
+          <div class="card">
+            <h2>Target</h2>
+            <p class="target-box"><strong>1</strong> if stock outperforms its sector benchmark over the next 63 trading days<br><strong>0</strong> otherwise</p>
+            <h2 class="subhead">Algorithms Compared</h2>
+            <div class="model-cards">
+              <div><strong>Logistic Regression</strong><span>Linear baseline</span></div>
+              <div><strong>Random Forest</strong><span>Nonlinear ensemble</span></div>
+              <div><strong>XGBoost</strong><span>Boosted-tree model</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card visual-card validation-card">
+          <h2>Target and Validation</h2>
+          <img src="assets/purged_validation_timeline.svg" alt="Purged expanding-window cross-validation timeline">
+          <p class="why-box"><strong>Why it matters:</strong> Because the label uses future returns, nearby observations can overlap with validation outcomes. The purge/embargo removes contaminated training rows.</p>
+          <p class="caption">5-fold purged expanding-window cross-validation, fixed 2024 holdout, 5-day embargo, and no random shuffling.</p>
+        </div>
+      </section>
+
+      <section class="column">
+        <div class="card visual-card">
+          <h2>What the Experiments Showed</h2>
+          <img src="assets/experiment_ladder.svg" alt="Results ladder showing project evolution">
+          <p class="caveat">The strongest checked-in sentiment result comes from a legacy 21-day benchmark. The final project contract uses the stricter 63-day sector-relative target.</p>
+        </div>
+
+        <div class="card visual-card">
+          <h2>Selected Benchmark Evidence</h2>
+          <div class="benchmark-grid">
+            <div class="metric-card">
+              <strong>63d Stability Candidate</strong>
+              <span>Selected model: XGBoost</span>
+              <span>Mean CV AUC: 0.5262</span>
+              <span>Worst-fold AUC: 0.4735</span>
+              <span>2024 holdout AUC: 0.4880</span>
+            </div>
+            <div class="metric-card amber">
+              <strong>Legacy 21d Sentiment Test</strong>
+              <span>Winner: event-specific sentiment only</span>
+              <span>Model: Random Forest</span>
+              <span>Holdout AUC: 0.5367</span>
+              <span>Not the final 63d label contract</span>
+            </div>
+          </div>
+          <img src="assets/results_63d_stability_chart.svg" alt="63-day stability candidate AUC bar chart">
+          <img src="assets/sentiment_comparison_chart.svg" alt="Sentiment comparison chart with legacy caveat">
+        </div>
+
+        <div class="card findings-card">
+          <h2>Main Findings</h2>
+          <ol>
+            <li>Quarterly filing events are a better modeling unit than daily stock rows.</li>
+            <li>Leakage control is central to the project, not a minor detail.</li>
+            <li>Fundamentals created a defensible baseline, but predictive signal was weak.</li>
+            <li>Generic market features did not consistently improve performance.</li>
+            <li>Event-specific sentiment was more promising than broad filing sentiment.</li>
+          </ol>
+        </div>
+
+        <div class="card next-card">
+          <h2>Next Steps</h2>
+          <p>Final claims should be based on completed 63d sector-relative benchmark artifacts, stability checks, and reproducible configs.</p>
+          <p class="future-work"><strong>Direction:</strong> better data, broader event-specific sentiment coverage, stronger diagnostics, and portfolio construction only after signal stability improves.</p>
+        </div>
+      </section>
+    </main>
+  </article>
+</body>
+</html>

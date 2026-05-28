@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1060" height="245" viewBox="0 0 1060 245">
+  <style>.h{font:700 28px Inter;fill:#0f172a}.t{font:700 21px Inter;fill:#0f172a}.s{font:18px Inter;fill:#475569}.train{fill:#2563EB}.purge{fill:#f59e0b}.val{fill:#10b981}.hold{fill:#0f172a}</style>
+  <rect width="1060" height="245" rx="22" fill="#F8FAFC"/>
+  <text class="h" x="490" y="38" text-anchor="middle">Purged Expanding-Window Validation</text>
+  <g transform="translate(65 74)">
+    <text class="t" x="0" y="25">CV Fold</text>
+    <rect class="train" x="126" y="5" width="450" height="30" rx="6"/>
+    <rect class="purge" x="592" y="5" width="90" height="30" rx="6"/>
+    <rect class="val" x="698" y="5" width="150" height="30" rx="6"/>
+    <text class="t" x="0" y="92">Final</text>
+    <rect class="train" x="126" y="72" width="610" height="30" rx="6"/>
+    <rect class="purge" x="752" y="72" width="90" height="30" rx="6"/>
+    <rect class="hold" x="858" y="72" width="74" height="30" rx="6"/>
+    <text class="s" x="351" y="128" text-anchor="middle">Expanding train window</text>
+    <text class="s" x="637" y="128" text-anchor="middle">Purge / embargo</text>
+    <text class="s" x="773" y="128" text-anchor="middle">Validation</text>
+    <text class="s" x="895" y="128" text-anchor="middle">2024 Holdout</text>
+  </g>
+  <g transform="translate(170 208)">
+    <rect class="train" width="30" height="16" rx="4"/><text class="s" x="40" y="14">Train</text>
+    <rect class="purge" x="138" width="30" height="16" rx="4"/><text class="s" x="178" y="14">Purge / embargo</text>
+    <rect class="val" x="360" width="30" height="16" rx="4"/><text class="s" x="400" y="14">Validation</text>
+    <rect class="hold" x="540" width="30" height="16" rx="4"/><text class="s" x="580" y="14">2024 Holdout</text>
+  </g>
+</svg>

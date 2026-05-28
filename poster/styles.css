@@ -1,0 +1,359 @@
+@page {
+  size: 48in 36in;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #F5F7FA;
+}
+
+.poster {
+  width: 48in;
+  height: 36in;
+  padding: 0.7in;
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #1F2933;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(5, 150, 105, 0.04) 42%, rgba(245, 247, 250, 0) 72%),
+    #F5F7FA;
+  overflow: hidden;
+}
+
+.header {
+  height: 4in;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.3in;
+  align-items: start;
+  border-bottom: 0.05in solid #D9E2EC;
+  padding-bottom: 0.28in;
+}
+
+h1 {
+  margin: 0 0 0.12in;
+  color: #0B1F3A;
+  font-size: 82pt;
+  line-height: 0.96;
+  letter-spacing: 0;
+}
+
+.subtitle {
+  margin: 0 0 0.18in;
+  max-width: 34in;
+  color: #334E68;
+  font-size: 35pt;
+  line-height: 1.14;
+}
+
+.thesis {
+  max-width: 35.8in;
+  background: #EAF2FF;
+  border: 0.035in solid #9CC2FF;
+  border-left: 0.12in solid #2563EB;
+  border-radius: 18px;
+  padding: 0.24in 0.3in;
+  font-size: 31pt;
+  line-height: 1.16;
+  color: #0B1F3A;
+}
+
+.author-block {
+  min-width: 5.8in;
+  background: #FFFFFF;
+  border: 1px solid #D9E2EC;
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  padding: 0.22in 0.26in;
+  color: #334E68;
+  font-size: 22pt;
+  line-height: 1.25;
+}
+
+.author-block strong,
+.author-block span {
+  display: block;
+}
+
+.author-block strong {
+  color: #0B1F3A;
+  font-size: 28pt;
+  margin-bottom: 0.08in;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr 1fr;
+  gap: 0.32in;
+  height: calc(36in - 5.75in);
+  padding-top: 0.3in;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.13in;
+  min-width: 0;
+}
+
+.card {
+  background: #FFFFFF;
+  border-radius: 18px;
+  padding: 0.19in;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  border: 1px solid #D9E2EC;
+}
+
+.card h2 {
+  margin: 0 0 0.08in;
+  color: #0B1F3A;
+  font-size: 30pt;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.card .subhead {
+  margin-top: 0.18in;
+}
+
+p,
+li,
+td,
+th {
+  font-size: 21pt;
+  line-height: 1.15;
+}
+
+p {
+  margin: 0 0 0.08in;
+}
+
+.lead {
+  font-size: 23pt;
+  color: #0B1F3A;
+}
+
+.compact-list,
+.hypotheses,
+.findings-card ol {
+  margin: 0;
+  padding-left: 0.34in;
+}
+
+.compact-list li,
+.hypotheses li,
+.findings-card li {
+  margin-bottom: 0.04in;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+th {
+  background: #EAF2FF;
+  color: #0B1F3A;
+  text-align: left;
+  font-weight: 700;
+}
+
+th,
+td {
+  border: 1px solid #D9E2EC;
+  padding: 0.055in;
+  vertical-align: top;
+}
+
+td {
+  font-size: 18.2pt;
+}
+
+th {
+  font-size: 18pt;
+}
+
+.visual-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.center-column {
+  gap: 0.12in;
+}
+
+.hero-card {
+  flex: 1.1;
+}
+
+.hero-card img {
+  height: 10.65in;
+  object-fit: contain;
+}
+
+.split-row {
+  display: grid;
+  grid-template-columns: 1.02fr 0.98fr;
+  gap: 0.16in;
+}
+
+.split-row .card {
+  min-height: 3.85in;
+}
+
+.target-box {
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  border-left: 0.1in solid #059669;
+  border-radius: 14px;
+  padding: 0.13in;
+  color: #064E3B;
+  font-size: 20pt;
+}
+
+.model-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.08in;
+}
+
+.model-cards div {
+  border: 1px solid #D9E2EC;
+  border-radius: 12px;
+  padding: 0.09in 0.12in;
+}
+
+.model-cards strong,
+.model-cards span,
+.metric-card strong,
+.metric-card span {
+  display: block;
+}
+
+.model-cards strong {
+  color: #0B1F3A;
+  font-size: 18.5pt;
+}
+
+.model-cards span {
+  color: #52606D;
+  font-size: 17pt;
+}
+
+.validation-card img {
+  max-height: 2.65in;
+  object-fit: contain;
+  margin-bottom: 0.1in;
+}
+
+.why-box {
+  background: #FFF7ED;
+  border: 1px solid #FDBA74;
+  border-left: 0.1in solid #D97706;
+  border-radius: 14px;
+  padding: 0.12in;
+  font-size: 18pt;
+}
+
+.caption {
+  color: #52606D;
+  font-size: 20pt;
+  line-height: 1.14;
+  margin: 0.08in 0 0;
+}
+
+.caveat {
+  background: #FFF7ED;
+  border: 1px solid #FDBA74;
+  border-radius: 14px;
+  color: #7C2D12;
+  padding: 0.1in 0.12in;
+  font-size: 20pt;
+  margin-top: 0.1in;
+}
+
+.benchmark-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.13in;
+  margin-bottom: 0.13in;
+}
+
+.metric-card {
+  background: #F8FAFC;
+  border: 1px solid #D9E2EC;
+  border-radius: 14px;
+  padding: 0.1in;
+}
+
+.metric-card strong {
+  color: #0B1F3A;
+  font-size: 20pt;
+  margin-bottom: 0.05in;
+}
+
+.metric-card span {
+  font-size: 18.5pt;
+  line-height: 1.15;
+}
+
+.metric-card.amber {
+  background: #FFF7ED;
+  border-color: #FDBA74;
+}
+
+.findings-card {
+  border-top: 0.08in solid #059669;
+}
+
+.future-work {
+  color: #334E68;
+}
+
+.conclusion-card {
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+  border-top: 0.11in solid #059669;
+}
+
+.conclusion-card p {
+  color: #064E3B;
+  font-size: 23pt;
+  line-height: 1.14;
+}
+
+.limitations-card {
+  border-top: 0.08in solid #D97706;
+}
+
+.limitations-card li {
+  font-size: 21.2pt;
+}
+
+.limitations-card .future-work,
+.next-card .future-work {
+  font-size: 20.8pt;
+}
+
+.findings-card li,
+.next-card p {
+  font-size: 22.2pt;
+}
+
+@media print {
+  body {
+    background: #F5F7FA;
+  }
+
+  .poster {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
